@@ -1,9 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot } from 'lucide-react';
+import { Send, User, Bot, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { toast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
@@ -12,18 +15,16 @@ interface Message {
   timestamp: Date;
 }
 
-const ChatInterface = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hello! I\'m your AI assistant powered by Sarvam AI. How can I help you today?',
-      sender: 'ai',
-      timestamp: new Date()
-    }
-  ]);
+interface ChatInterfaceProps {
+  user: SupabaseUser;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -38,6 +39,72 @@ const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  // Load chat history when component mounts
+  useEffect(() => {
+    loadChatHistory();
+  }, [user.id]);
+
+  const loadChatHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error loading chat history:', error);
+        toast({
+          title: "Error loading chat history",
+          description: "Could not load your previous messages.",
+          variant: "destructive",
+        });
+      } else {
+        const formattedMessages: Message[] = data.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          sender: msg.sender as 'user' | 'ai',
+          timestamp: new Date(msg.created_at)
+        }));
+        
+        setMessages(formattedMessages);
+        
+        // If no history, show welcome message
+        if (formattedMessages.length === 0) {
+          const welcomeMessage: Message = {
+            id: 'welcome',
+            content: 'Hello! I\'m your AI assistant powered by Sarvam AI. How can I help you today?',
+            sender: 'ai',
+            timestamp: new Date()
+          };
+          setMessages([welcomeMessage]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const saveMessageToDatabase = async (content: string, sender: 'user' | 'ai') => {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          user_id: user.id,
+          content,
+          sender
+        });
+
+      if (error) {
+        console.error('Error saving message:', error);
+      }
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  };
 
   const sendMessageToSarvam = async (message: string) => {
     try {
@@ -81,13 +148,17 @@ const ChatInterface = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageContent = inputValue;
     setInputValue('');
     setIsLoading(true);
     setIsTyping(true);
 
+    // Save user message to database
+    await saveMessageToDatabase(messageContent, 'user');
+
     // Simulate AI thinking time
     setTimeout(async () => {
-      const aiResponse = await sendMessageToSarvam(inputValue);
+      const aiResponse = await sendMessageToSarvam(messageContent);
       
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -99,6 +170,9 @@ const ChatInterface = () => {
       setIsTyping(false);
       setMessages(prev => [...prev, aiMessage]);
       setIsLoading(false);
+
+      // Save AI message to database
+      await saveMessageToDatabase(aiResponse, 'ai');
     }, 1500);
   };
 
@@ -109,21 +183,58 @@ const ChatInterface = () => {
     }
   };
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  if (isLoadingHistory) {
+    return (
+      <div className="flex flex-col h-screen bg-black items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full glass animate-pulse glow"></div>
+          <p className="text-muted-foreground">Loading your chat history...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-black relative">
       {/* Chat Header */}
       <div className="glass-card rounded-none border-x-0 border-t-0 p-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full glass flex items-center justify-center glow-subtle">
-            <Bot className="w-5 h-5 text-primary" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full glass flex items-center justify-center glow-subtle">
+              <Bot className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-white">Sarvam AI Assistant</h2>
+              <p className="text-sm text-muted-foreground">Always here to help</p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-semibold text-white">Sarvam AI Assistant</h2>
-            <p className="text-sm text-muted-foreground">Always here to help</p>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              {user.email}
+            </span>
+            <Button
+              onClick={handleLogout}
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-white"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
