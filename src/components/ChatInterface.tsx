@@ -114,9 +114,9 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-black">
+    <div className="flex flex-col h-screen bg-black relative">
       {/* Chat Header */}
-      <div className="glass-card rounded-none border-x-0 border-t-0 p-4">
+      <div className="glass-card rounded-none border-x-0 border-t-0 p-4 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full glass flex items-center justify-center glow-subtle">
             <Bot className="w-5 h-5 text-primary" />
@@ -128,9 +128,9 @@ const ChatInterface = () => {
         </div>
       </div>
 
-      {/* Messages Area */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-        <div className="space-y-6">
+      {/* Messages Area - with bottom padding for floating input */}
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-32">
+        <div className="space-y-6 max-w-4xl mx-auto">
           {messages.map((message) => (
             <div key={message.id} className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               {message.sender === 'ai' && (
@@ -140,7 +140,11 @@ const ChatInterface = () => {
               )}
               
               <div className={`max-w-[70%] ${message.sender === 'user' ? 'order-first' : ''}`}>
-                <div className={`glass-card rounded-2xl p-4 ${message.sender === 'user' ? 'bg-primary/10 glow-subtle' : ''}`}>
+                <div className={`glass-card rounded-2xl p-4 ${
+                  message.sender === 'user' 
+                    ? 'bg-gradient-to-r from-primary/20 to-accent/20 glow-subtle border-primary/30' 
+                    : 'border-primary/20'
+                }`}>
                   <p className="text-white leading-relaxed">{message.content}</p>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 px-2">
@@ -150,7 +154,7 @@ const ChatInterface = () => {
 
               {message.sender === 'user' && (
                 <div className="w-8 h-8 rounded-full glass flex items-center justify-center glow-subtle flex-shrink-0">
-                  <User className="w-4 h-4 text-primary" />
+                  <User className="w-4 h-4 text-accent" />
                 </div>
               )}
             </div>
@@ -158,11 +162,11 @@ const ChatInterface = () => {
 
           {/* Typing Indicator */}
           {isTyping && (
-            <div className="flex gap-3 justify-start">
+            <div className="flex gap-3 justify-start max-w-4xl mx-auto">
               <div className="w-8 h-8 rounded-full glass flex items-center justify-center glow-subtle flex-shrink-0">
                 <Bot className="w-4 h-4 text-primary" />
               </div>
-              <div className="glass-card rounded-2xl p-4 max-w-[70%]">
+              <div className="glass-card rounded-2xl p-4 max-w-[70%] border-primary/20">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-primary rounded-full typing-dot"></div>
                   <div className="w-2 h-2 bg-primary rounded-full typing-dot"></div>
@@ -174,26 +178,28 @@ const ChatInterface = () => {
         </div>
       </ScrollArea>
 
-      {/* Input Area */}
-      <div className="glass-card rounded-none border-x-0 border-b-0 p-4">
-        <div className="flex gap-3 items-end">
-          <div className="flex-1 glass rounded-2xl p-3 border-primary/20 focus-within:border-primary focus-within:glow transition-all duration-300">
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="border-0 bg-transparent text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[20px] max-h-32"
-              disabled={isLoading}
-            />
+      {/* Floating Input Area */}
+      <div className="floating-input">
+        <div className="glass-input rounded-3xl p-4 mx-4 border-primary/40 glow-subtle">
+          <div className="flex gap-3 items-end max-w-4xl mx-auto">
+            <div className="flex-1 bg-black/20 rounded-2xl p-3 border border-primary/20 focus-within:border-primary/50 focus-within:glow transition-all duration-300">
+              <Input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                className="border-0 bg-transparent text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[20px] max-h-32"
+                disabled={isLoading}
+              />
+            </div>
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isLoading}
+              className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-105 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              <Send className="w-5 h-5" />
+            </Button>
           </div>
-          <Button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading}
-            className="w-12 h-12 rounded-full bg-primary hover:bg-primary/90 text-black transition-all duration-300 hover:scale-105 hover:glow disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="w-5 h-5" />
-          </Button>
         </div>
       </div>
     </div>

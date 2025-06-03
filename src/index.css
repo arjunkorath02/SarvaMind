@@ -8,30 +8,30 @@
     --background: 0 0% 0%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 5%;
+    --card: 240 10% 8%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 3%;
+    --popover: 240 10% 5%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 147 100% 44%;
-    --primary-foreground: 0 0% 5%;
+    --primary: 259 100% 65%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 0 0% 10%;
+    --secondary: 240 10% 12%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 8%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 240 10% 10%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 147 100% 44%;
+    --accent: 324 100% 75%;
     --accent-foreground: 0 0% 5%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 10%;
-    --ring: 147 100% 44%;
+    --border: 240 10% 15%;
+    --input: 240 10% 12%;
+    --ring: 259 100% 65%;
 
     --radius: 1rem;
   }
@@ -50,23 +50,33 @@
   }
 
   .glass {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(138, 43, 226, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(138, 43, 226, 0.2);
   }
 
   .glass-card {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(138, 43, 226, 0.05);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(138, 43, 226, 0.15);
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(138, 43, 226, 0.3);
   }
 
   .glow {
-    box-shadow: 0 0 20px rgba(79, 209, 197, 0.3);
+    box-shadow: 0 0 30px rgba(138, 43, 226, 0.4);
   }
 
   .glow-subtle {
-    box-shadow: 0 0 10px rgba(79, 209, 197, 0.1);
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.2);
+  }
+
+  .glow-pink {
+    box-shadow: 0 0 20px rgba(244, 114, 182, 0.3);
   }
 }
 
@@ -77,10 +87,10 @@
 
   @keyframes glow {
     from {
-      box-shadow: 0 0 10px rgba(79, 209, 197, 0.2);
+      box-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
     }
     to {
-      box-shadow: 0 0 20px rgba(79, 209, 197, 0.4);
+      box-shadow: 0 0 30px rgba(138, 43, 226, 0.6);
     }
   }
 
@@ -104,6 +114,24 @@
     40% {
       transform: scale(1);
       opacity: 1;
+    }
+  }
+
+  .floating-input {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 50;
+  }
+
+  @media (min-width: 768px) {
+    .floating-input {
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+      width: calc(100% - 40px);
+      max-width: 800px;
     }
   }
 }
