@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import ChatInterface from './ChatInterface';
+import EnhancedChatInterface from './EnhancedChatInterface';
 import AuthForm from './AuthForm';
 
 const ChatApp = () => {
@@ -124,7 +124,7 @@ const ChatApp = () => {
     );
   }
 
-  return <ChatInterface user={user} />;
+  return <EnhancedChatInterface user={user} />;
 };
 
 export default ChatApp;
