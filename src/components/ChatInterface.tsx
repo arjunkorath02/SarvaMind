@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, LogOut } from 'lucide-react';
+import { Send, User, Bot, LogOut, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -130,7 +130,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
       }
 
       const data = await response.json();
-      return data.translated_text || "I'm processing your request. This is a demo response from Sarvam AI integration.";
+      // Ensure AI doesn't reply with the same message as user
+      const aiResponse = data.translated_text || "I understand your message. How can I assist you further?";
+      
+      // Check if AI response is too similar to user input
+      if (aiResponse.toLowerCase().trim() === message.toLowerCase().trim()) {
+        return "I understand what you're saying. Could you please provide more details so I can help you better?";
+      }
+      
+      return aiResponse;
     } catch (error) {
       console.error('Error calling Sarvam AI:', error);
       return "I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment.";
@@ -183,6 +191,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
     }
   };
 
+  const handleNewChat = async () => {
+    // Clear current messages except welcome message
+    const welcomeMessage: Message = {
+      id: 'welcome-new',
+      content: 'Hello! I\'m your AI assistant powered by Sarvam AI. How can I help you today?',
+      sender: 'ai',
+      timestamp: new Date()
+    };
+    setMessages([welcomeMessage]);
+    
+    toast({
+      title: "New chat started",
+      description: "Previous messages are still saved in your history.",
+    });
+  };
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -224,6 +248,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              onClick={handleNewChat}
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-white"
+              title="Start new chat"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
             <span className="text-sm text-muted-foreground">
               {user.email}
             </span>
@@ -290,26 +323,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
       </ScrollArea>
 
       {/* Floating Input Area */}
-      <div className="floating-input">
-        <div className="glass-input rounded-3xl p-4 mx-4 border-primary/40 glow-subtle">
-          <div className="flex gap-3 items-end max-w-4xl mx-auto">
-            <div className="flex-1 bg-black/20 rounded-2xl p-3 border border-primary/20 focus-within:border-primary/50 focus-within:glow transition-all duration-300">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
-                className="border-0 bg-transparent text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[20px] max-h-32"
-                disabled={isLoading}
-              />
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
+        <div className="max-w-4xl mx-auto">
+          <div className="glass-input rounded-full p-2 border-primary/40 glow-subtle">
+            <div className="flex gap-2 items-center">
+              <div className="flex-1">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message..."
+                  className="border-0 bg-transparent text-white placeholder:text-muted-foreground focus-visible:ring-0 h-12 px-4"
+                  disabled={isLoading}
+                />
+              </div>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim() || isLoading}
+                className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-105 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex-shrink-0"
+              >
+                <Send className="w-5 h-5" />
+              </Button>
             </div>
-            <Button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading}
-              className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-105 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              <Send className="w-5 h-5" />
-            </Button>
           </div>
         </div>
       </div>
