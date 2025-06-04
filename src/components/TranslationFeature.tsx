@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { translate, ChevronDown, ChevronUp } from 'lucide-react';
+import { Languages, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -52,7 +52,7 @@ const TranslationFeature: React.FC<TranslationFeatureProps> = ({ text, onTransla
         size="sm"
         className="text-muted-foreground hover:text-white flex items-center gap-2"
       >
-        <translate className="w-4 h-4" />
+        <Languages className="w-4 h-4" />
         Translate
         {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </Button>
