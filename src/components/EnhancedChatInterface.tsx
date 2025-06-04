@@ -388,10 +388,10 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
             <div className="backdrop-blur-xl p-4 border border-primary/30 shadow-2xl glow-subtle rounded-full bg-[#272727]/[0.21]">
               <div className="space-y-3 rounded-full">
                 {/* Text Input */}
-                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type your message... (Shift+Enter for new line)" disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-30 bg-black/[0.41] rounded-full py-0 my-0 mx-0 px-[16px]" />
+                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type your message... (Shift+Enter for new line)" disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-30 bg-black/[0.41] mx-0 px-[15px] py-[4px] my-[9px] rounded-full" />
                 
                 {/* Controls */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between my-0 py-0 px-[19px] mx-[4px] rounded-full">
                   <div className="flex items-center gap-2">
                     <Button onClick={() => setShowMediaUpload(!showMediaUpload)} variant="ghost" size="sm" className="text-muted-foreground hover:text-white" title="Upload media">
                       <Upload className="w-4 h-4" />
@@ -400,7 +400,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                     <AudioRecorder onAudioRecorded={handleAudioRecorded} />
                   </div>
                   
-                  <Button onClick={handleSendMessage} disabled={!inputValue.trim() && selectedFiles.length === 0 || isLoading} className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-105 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex-shrink-0">
+                  <Button onClick={handleSendMessage} disabled={!inputValue.trim() && selectedFiles.length === 0 || isLoading} className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-105 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex-shrink-0 font-normal">
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>
