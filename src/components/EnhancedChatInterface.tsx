@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, LogOut, Plus, Upload } from 'lucide-react';
+import { Send, User, Bot, LogOut, Plus, Upload, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -45,6 +46,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
   const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
   const [showMediaUpload, setShowMediaUpload] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -261,6 +263,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
     setMessages([]);
     setSelectedFiles([]);
     setShowMediaUpload(false);
+    setSidebarOpen(false);
   };
 
   const handleLogout = async () => {
@@ -309,20 +312,45 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
   }
 
   return (
-    <div className="flex h-screen bg-black">
-      {/* Chat Sidebar */}
-      <ChatSidebar
-        user={user}
-        currentSessionId={currentSessionId}
-        onSessionSelect={handleSessionSelect}
-        onNewChat={handleNewChat}
-      />
+    <div className="flex h-screen bg-black relative">
+      {/* Hamburger Menu Button */}
+      <Button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        variant="ghost"
+        size="sm"
+        className="fixed top-4 left-4 z-50 text-muted-foreground hover:text-white glass-card glow-subtle"
+        title="Toggle sidebar"
+      >
+        <Menu className="w-5 h-5" />
+      </Button>
+
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sliding Sidebar */}
+      <div className={`fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="w-80 h-full bg-black/40 backdrop-blur-lg border-r border-primary/20">
+          <ChatSidebar
+            user={user}
+            currentSessionId={currentSessionId}
+            onSessionSelect={handleSessionSelect}
+            onNewChat={handleNewChat}
+          />
+        </div>
+      </div>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col relative">
         {/* Chat Header */}
         <div className="glass-card rounded-none border-x-0 border-t-0 p-4 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between ml-16">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full glass flex items-center justify-center glow-subtle">
                 <Bot className="w-5 h-5 text-primary" />
@@ -439,12 +467,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
           </div>
         </ScrollArea>
 
-        {/* Enhanced Floating Input Area */}
-        <div className="fixed bottom-0 left-64 right-0 p-4 bg-gradient-to-t from-black via-black/95 to-transparent">
-          <div className="max-w-4xl mx-auto space-y-4">
+        {/* Floating Input Area with Glassmorphism */}
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-4 z-30">
+          <div className="space-y-4">
             {/* Media Upload Area */}
             {showMediaUpload && (
-              <div className="glass-card rounded-2xl p-4 border-primary/40">
+              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
                 <MediaUpload
                   onFilesSelected={setSelectedFiles}
                   selectedFiles={selectedFiles}
@@ -453,8 +481,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
               </div>
             )}
 
-            {/* Input Container */}
-            <div className="glass-input rounded-2xl p-3 border-primary/40 glow-subtle">
+            {/* Input Container with Enhanced Glassmorphism */}
+            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
               <div className="space-y-3">
                 {/* Text Input */}
                 <Textarea

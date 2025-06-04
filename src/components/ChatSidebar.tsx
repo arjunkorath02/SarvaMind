@@ -47,8 +47,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           id,
           title,
           created_at,
-          updated_at,
-          messages (count)
+          updated_at
         `)
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
@@ -61,14 +60,24 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           variant: "destructive",
         });
       } else {
-        const formattedSessions = data.map(session => ({
-          id: session.id,
-          title: session.title,
-          created_at: session.created_at,
-          updated_at: session.updated_at,
-          message_count: session.messages?.[0]?.count || 0
-        }));
-        setSessions(formattedSessions);
+        // Get message count for each session
+        const sessionsWithCount = await Promise.all(
+          data.map(async (session) => {
+            const { count } = await supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('session_id', session.id);
+            
+            return {
+              id: session.id,
+              title: session.title,
+              created_at: session.created_at,
+              updated_at: session.updated_at,
+              message_count: count || 0
+            };
+          })
+        );
+        setSessions(sessionsWithCount);
       }
     } catch (error) {
       console.error('Error loading chat sessions:', error);
