@@ -304,8 +304,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                 <Bot className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h2 className="font-semibold text-white">Enhanced Sarvam AI Assistant</h2>
-                <p className="text-sm text-muted-foreground">Rich media & multilingual support</p>
+                <h2 className="font-semibold text-white">SarvaMind</h2>
+                
               </div>
             </div>
             <div className="flex items-center gap-3">
