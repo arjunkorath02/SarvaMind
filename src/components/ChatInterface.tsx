@@ -323,7 +323,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
       </ScrollArea>
 
       {/* Floating Input Area */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
+      <div className="floating bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
         <div className="max-w-4xl mx-auto">
           <div className="glass-input rounded-full p-2 border-primary/40 glow-subtle">
             <div className="flex gap-2 items-center">
@@ -333,7 +333,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask anything"
-                  className="border-0 bg-transparent text-white placeholder:text-muted-foreground focus-visible:ring-0 h-12 px-4"
+                  className="border-0 bg-transparent text-white placeholder:text-muted-foreground focus-visible:ring-0 h-18 px-4"
                   disabled={isLoading}
                 />
               </div>
