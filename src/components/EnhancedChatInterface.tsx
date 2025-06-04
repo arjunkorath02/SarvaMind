@@ -388,7 +388,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
             <div className="backdrop-blur-xl p-4 border border-primary/30 shadow-2xl glow-subtle rounded-full bg-[#272727]/[0.21]">
               <div className="space-y-3 rounded-full">
                 {/* Text Input */}
-                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type your message... (Shift+Enter for new line)" disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-30 bg-black/[0.41] mx-0 px-[15px] py-[4px] my-[9px] rounded-full" />
+                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type your message..." disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-30 bg-black/[0.41] mx-0 px-[15px] py-[4px] my-[9px] rounded-full" />
                 
                 {/* Controls */}
                 <div className="flex items-center justify-between my-0 py-0 px-[19px] mx-[4px] rounded-full">
