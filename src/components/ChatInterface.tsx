@@ -332,7 +332,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
+                  placeholder="Ask anything"
                   className="border-0 bg-transparent text-white placeholder:text-muted-foreground focus-visible:ring-0 h-12 px-4"
                   disabled={isLoading}
                 />

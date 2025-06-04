@@ -215,7 +215,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     // Add welcome message
     const welcomeMessage: Message = {
       id: 'welcome-new',
-      content: 'Hello! I\'m your enhanced AI assistant powered by Sarvam AI. I can help with text, images, documents, voice messages, and even translate between languages. How can I assist you today?',
+      content: 'What can I help with?',
       sender: 'ai',
       timestamp: new Date(),
       session_id: 'welcome'
@@ -388,7 +388,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
             <div className="backdrop-blur-xl p-4 border border-primary/30 shadow-2xl glow-subtle rounded-full bg-[#272727]/[0.21]">
               <div className="space-y-3 rounded-full">
                 {/* Text Input */}
-                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type your message..." disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-30 bg-black/[0.41] mx-0 px-[15px] py-[4px] my-[9px] rounded-full" />
+                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Ask anything" disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-30 bg-black/[0.41] mx-0 px-[15px] py-[4px] my-[9px] rounded-full" />
                 
                 {/* Controls */}
                 <div className="flex items-center justify-between my-0 py-0 px-[19px] mx-[4px] rounded-full">
