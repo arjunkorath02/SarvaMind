@@ -295,7 +295,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col relative">
+      <div className="flex-1 flex flex-col relative rounded-none bg-black">
         {/* Chat Header */}
         <div className="glass-card rounded-none border-x-0 border-t-0 p-4 sticky top-0 z-10">
           <div className="flex items-center justify-between ml-16">
@@ -378,17 +378,17 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
 
         {/* Floating Input Area with Glassmorphism */}
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-4 z-30">
-          <div className="space-y-4">
+          <div className="space-y-4 rounded-full bg-[#1e1e1e]/15">
             {/* Media Upload Area */}
             {showMediaUpload && <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
                 <MediaUpload onFilesSelected={setSelectedFiles} selectedFiles={selectedFiles} onRemoveFile={id => setSelectedFiles(prev => prev.filter(f => f.id !== id))} />
               </div>}
 
             {/* Input Container with Enhanced Glassmorphism */}
-            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
-              <div className="space-y-3">
+            <div className="backdrop-blur-xl p-4 border border-primary/30 shadow-2xl glow-subtle rounded-full bg-[#272727]/[0.21]">
+              <div className="space-y-3 rounded-full">
                 {/* Text Input */}
-                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type your message... (Shift+Enter for new line)" className="border-0 bg-transparent text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-32" disabled={isLoading} />
+                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type your message... (Shift+Enter for new line)" disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-30 bg-black/[0.41] rounded-full py-0 my-0 mx-0 px-[16px]" />
                 
                 {/* Controls */}
                 <div className="flex items-center justify-between">
