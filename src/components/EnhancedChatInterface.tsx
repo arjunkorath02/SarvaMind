@@ -38,27 +38,40 @@ interface EnhancedChatInterfaceProps {
 }
 
 const formatAIResponse = (content: string): string => {
+  // Remove repeated greetings and intro text
+  const greetingPatterns = [
+    /^Hello! I'm.*?(?=\n|$)/gim,
+    /^Hi! I'm.*?(?=\n|$)/gim,
+    /^I'm SarvaMind.*?(?=\n|$)/gim,
+    /^I'm your.*?assistant.*?(?=\n|$)/gim,
+  ];
+  
+  let cleanedContent = content;
+  greetingPatterns.forEach(pattern => {
+    cleanedContent = cleanedContent.replace(pattern, '').trim();
+  });
+  
   // Convert numbered lists
-  content = content.replace(/^(\d+)\.\s+(.+$)/gm, '<li>$2</li>');
+  cleanedContent = cleanedContent.replace(/^(\d+)\.\s+(.+$)/gm, '<li>$2</li>');
   
   // Convert bullet points
-  content = content.replace(/^[-•]\s+(.+$)/gm, '<li>$1</li>');
+  cleanedContent = cleanedContent.replace(/^[-•]\s+(.+$)/gm, '<li>$1</li>');
   
   // Wrap consecutive list items in <ol> or <ul>
-  content = content.replace(/(<li>.*<\/li>)/gs, (match) => {
+  cleanedContent = cleanedContent.replace(/(<li>.*<\/li>)/gs, (match) => {
     const hasNumbers = /^\d+\./.test(match);
     const tag = hasNumbers ? 'ol' : 'ul';
     return `<${tag}>${match}</${tag}>`;
   });
   
   // Convert line breaks to paragraphs for better formatting
-  content = content.replace(/\n\n/g, '</p><p>');
-  content = `<p>${content}</p>`;
+  cleanedContent = cleanedContent.replace(/\n\n/g, '</p><p>');
+  cleanedContent = `<p>${cleanedContent}</p>`;
   
   // Clean up empty paragraphs
-  content = content.replace(/<p><\/p>/g, '');
+  cleanedContent = cleanedContent.replace(/<p><\/p>/g, '');
   
-  return content;
+  return cleanedContent;
 };
 
 const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
@@ -128,7 +141,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         if (formattedMessages.length === 0 && !currentSessionId) {
           const welcomeMessage: Message = {
             id: 'welcome',
-            content: 'Hello! I\'m SarvaMind, your enhanced AI assistant. I can help with text, images, documents, voice messages, translation between Indian languages, and even generate/edit images. How can I assist you today?',
+            content: 'What can I help with?',
             sender: 'ai',
             timestamp: new Date(),
             session_id: 'welcome'
@@ -176,8 +189,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     };
 
     try {
-      const { data, error } = await (supabase as any)
-        .from('chat_sessions')
+      const { data, error } = await supabase
+        .from('chat_sessions' as any)
         .insert({
           user_id: user.id,
           title: generateTitle(firstMessage)
@@ -198,8 +211,15 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   };
 
   const getConversationHistory = (): string => {
-    const recentMessages = messages.slice(-6); // Get last 6 messages for context
-    return recentMessages.map(msg => `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n');
+    // Get recent messages but filter out repeated greetings
+    const recentMessages = messages
+      .filter(msg => !msg.content.toLowerCase().includes("i'm sarvamind") && 
+                     !msg.content.toLowerCase().includes("how can i help"))
+      .slice(-4); // Reduced to 4 messages for better context
+    
+    return recentMessages
+      .map(msg => `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+      .join('\n');
   };
 
   const handleSendMessage = async () => {
@@ -236,9 +256,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     setTimeout(async () => {
       try {
         const conversationHistory = getConversationHistory();
-        const contextualPrompt = conversationHistory 
-          ? `Previous conversation:\n${conversationHistory}\n\nCurrent message: ${messageContent || 'User shared media files'}`
-          : messageContent || 'User shared media files';
+        let contextualPrompt = messageContent || 'User shared media files';
+        
+        // Only add context if there's meaningful conversation history
+        if (conversationHistory && conversationHistory.trim().length > 0) {
+          contextualPrompt = `Context: ${conversationHistory}\n\nCurrent: ${messageContent || 'User shared media files'}`;
+        }
 
         const aiResponse = await sarvamAI.sendMessage(contextualPrompt);
         const formattedResponse = formatAIResponse(aiResponse);
@@ -325,8 +348,17 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
       };
       
       setSelectedFiles(prev => [...prev, mediaFile]);
+      toast({
+        title: "Audio recorded",
+        description: "Audio file ready for upload."
+      });
     } catch (error) {
       console.error('Error processing audio:', error);
+      toast({
+        title: "Error processing audio",
+        description: "Could not process the audio recording.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -360,7 +392,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
 
   return (
     <div className="flex h-screen bg-black relative overflow-hidden">
-      {/* Hamburger Menu Button */}
+      {/* Hamburger Menu Button - Fixed positioning */}
       <Button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         variant="ghost"
@@ -384,7 +416,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden" 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden" 
           onClick={() => setSidebarOpen(false)} 
         />
       )}
@@ -420,7 +452,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground hidden sm:block">
+              <span className="text-sm text-muted-foreground hidden sm:block truncate max-w-32">
                 {user.email}
               </span>
               <Button
@@ -435,8 +467,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
           </div>
         </div>
 
-        {/* Messages Area */}
-        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-32">
+        {/* Messages Area - Increased bottom padding for translate menu visibility */}
+        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-40">
           <div className="space-y-6 max-w-4xl mx-auto">
             {messages.map((message) => (
               <div key={message.id} className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -451,7 +483,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                 )}
                 
                 <div className={`max-w-[85%] sm:max-w-[70%] ${message.sender === 'user' ? 'order-first' : ''}`}>
-                  <div className={`glass-card rounded-2xl p-4 ${
+                  <div className={`glass-card rounded-2xl p-4 mb-4 ${
                     message.sender === 'user' 
                       ? 'bg-gradient-to-r from-primary/20 to-accent/20 glow-subtle border-primary/30' 
                       : 'border-primary/20'
@@ -488,15 +520,18 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                     )}
                   </div>
                   
-                  <div className="flex items-center justify-between mt-2 px-2">
+                  {/* Message metadata and actions with proper spacing */}
+                  <div className="flex items-center justify-between px-2 mb-4">
                     <p className="text-xs text-muted-foreground">
                       {formatTime(message.timestamp)}
                     </p>
                     
                     {message.sender === 'ai' && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 z-20 relative">
                         <ImprovedTextToSpeech text={message.content} />
-                        <ImprovedTranslationFeature text={message.content} onTranslate={handleTranslate} />
+                        <div className="relative">
+                          <ImprovedTranslationFeature text={message.content} onTranslate={handleTranslate} />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -532,12 +567,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
           </div>
         </ScrollArea>
 
-        {/* Floating Input Area with Enhanced Glassmorphism */}
+        {/* Enhanced Floating Input Area */}
         <div className="fixed bottom-4 left-4 right-4 md:left-1/2 md:transform md:-translate-x-1/2 md:w-full md:max-w-4xl md:px-4 z-30">
           <div className="space-y-4">
             {/* Media Upload Area */}
             {showMediaUpload && (
-              <div className="backdrop-blur-xl bg-white/5 rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
+              <div className="backdrop-blur-xl bg-black/30 rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
                 <MediaUpload 
                   onFilesSelected={setSelectedFiles} 
                   selectedFiles={selectedFiles}
@@ -546,8 +581,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
               </div>
             )}
 
-            {/* Input Container with Enhanced Glassmorphism */}
-            <div className="backdrop-blur-xl bg-[rgba(255,255,255,0.05)] p-4 border border-primary/30 shadow-2xl glow-subtle rounded-2xl">
+            {/* Enhanced Input Container */}
+            <div className="backdrop-blur-xl bg-black/40 p-4 border border-primary/30 shadow-2xl glow-subtle rounded-2xl">
               <div className="space-y-3">
                 {/* Text Input */}
                 <Textarea

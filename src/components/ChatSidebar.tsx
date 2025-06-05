@@ -41,8 +41,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const loadChatSessions = async () => {
     try {
-      const { data, error } = await (supabase as any)
-        .from('chat_sessions')
+      const { data, error } = await supabase
+        .from('chat_sessions' as any)
         .select('id, title, created_at, updated_at')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
@@ -94,8 +94,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     try {
       const title = firstMessage ? generateChatTitle(firstMessage) : 'New Chat';
       
-      const { data, error } = await (supabase as any)
-        .from('chat_sessions')
+      const { data, error } = await supabase
+        .from('chat_sessions' as any)
         .insert({
           user_id: user.id,
           title
@@ -118,8 +118,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const updateSessionTitle = async (sessionId: string, newTitle: string) => {
     try {
-      const { error } = await (supabase as any)
-        .from('chat_sessions')
+      const { error } = await supabase
+        .from('chat_sessions' as any)
         .update({ title: newTitle })
         .eq('id', sessionId);
 
@@ -141,8 +141,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const deleteSession = async (sessionId: string) => {
     try {
-      const { error } = await (supabase as any)
-        .from('chat_sessions')
+      const { error } = await supabase
+        .from('chat_sessions' as any)
         .delete()
         .eq('id', sessionId);
 
