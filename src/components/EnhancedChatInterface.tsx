@@ -422,13 +422,13 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
               </div>}
 
             {/* Enhanced Input Container */}
-            <div className="backdrop-blur-xl bg-black/40 p-4 border border-primary/30 shadow-2xl glow-subtle rounded-2xl">
+            <div className="backdrop-blur-xl p-4 border border-primary/30 shadow-2xl glow-subtle rounded-full bg-transparent">
               <div className="space-y-3">
                 {/* Text Input */}
-                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Ask anything" disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-32 bg-transparent" />
+                <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Ask anything... (Shift+Enter for new line)" disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-32 px-[28px] my-0 py-0 bg-transparent" />
                 
                 {/* Controls */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between px-[28px]">
                   <div className="flex items-center gap-2">
                     <Button onClick={() => setShowMediaUpload(!showMediaUpload)} variant="ghost" size="sm" className="text-muted-foreground hover:text-white" title="Upload media">
                       <Upload className="w-4 h-4" />
