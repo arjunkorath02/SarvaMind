@@ -342,9 +342,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground hidden sm:block truncate max-w-32">
-                {user.email}
-              </span>
+              
               <Button onClick={handleLogout} variant="ghost" size="sm" className="text-muted-foreground hover:text-white">
                 <LogOut className="w-4 h-4" />
               </Button>
