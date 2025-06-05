@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Plus, Trash2, Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
 
 interface ChatSession {
@@ -17,7 +17,7 @@ interface ChatSession {
 }
 
 interface ChatSidebarProps {
-  user: User;
+  user: SupabaseUser;
   currentSessionId: string | null;
   onSessionSelect: (sessionId: string | null) => void;
   onNewChat: () => void;
@@ -41,15 +41,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const loadChatSessions = async () => {
     try {
-      // Use type assertion to work around TypeScript limitations
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('chat_sessions')
-        .select(`
-          id,
-          title,
-          created_at,
-          updated_at
-        `)
+        .select('id, title, created_at, updated_at')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
@@ -63,7 +57,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       } else {
         // Get message count for each session
         const sessionsWithCount = await Promise.all(
-          data.map(async (session: any) => {
+          (data || []).map(async (session: any) => {
             const { count } = await supabase
               .from('messages')
               .select('*', { count: 'exact', head: true })
@@ -88,7 +82,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   const generateChatTitle = (firstMessage: string): string => {
-    // Generate title from first meaningful message
     const words = firstMessage.trim().split(' ').slice(0, 4);
     let title = words.join(' ');
     if (firstMessage.length > 30) {
@@ -101,7 +94,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     try {
       const title = firstMessage ? generateChatTitle(firstMessage) : 'New Chat';
       
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('chat_sessions')
         .insert({
           user_id: user.id,
@@ -125,7 +118,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const updateSessionTitle = async (sessionId: string, newTitle: string) => {
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('chat_sessions')
         .update({ title: newTitle })
         .eq('id', sessionId);
@@ -148,7 +141,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const deleteSession = async (sessionId: string) => {
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('chat_sessions')
         .delete()
         .eq('id', sessionId);
@@ -221,21 +214,30 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   }
 
   return (
-    <div className="w-64 h-full glass-card border-r border-primary/20 flex flex-col">
-      {/* Header */}
+    <div className="w-80 h-full glass-card border-r border-primary/20 flex flex-col backdrop-blur-lg">
+      {/* Header with Profile */}
       <div className="p-4 border-b border-primary/20">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-white">Chat History</h2>
+        {/* Profile Section */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full glass flex items-center justify-center glow-subtle">
+            <User className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">{user.email}</p>
+            <p className="text-xs text-muted-foreground">Online</p>
+          </div>
           <Button
             onClick={() => setIsCollapsed(true)}
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-white"
+            className="text-muted-foreground hover:text-white flex-shrink-0"
             title="Collapse sidebar"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* New Chat Button */}
         <Button
           onClick={onNewChat}
           className="w-full bg-primary hover:bg-primary/90 text-white"
@@ -246,93 +248,99 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </Button>
       </div>
 
-      {/* Sessions List */}
-      <ScrollArea className="flex-1 p-2">
-        {isLoading ? (
-          <div className="p-4 text-center text-muted-foreground">
-            Loading chats...
-          </div>
-        ) : sessions.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground">
-            No chat history yet
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {sessions.map((session) => (
-              <div
-                key={session.id}
-                className={`group relative rounded-lg p-3 cursor-pointer transition-colors ${
-                  currentSessionId === session.id
-                    ? 'bg-primary/20 border border-primary/40'
-                    : 'hover:bg-primary/10'
-                }`}
-                onClick={() => onSessionSelect(session.id)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    {editingId === session.id ? (
-                      <Input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        onBlur={() => handleEditSubmit(session.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleEditSubmit(session.id);
-                          } else if (e.key === 'Escape') {
-                            setEditingId(null);
-                          }
-                        }}
-                        className="text-sm bg-transparent border-primary/30"
-                        autoFocus
-                      />
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2 mb-1">
-                          <MessageSquare className="w-3 h-3 text-primary flex-shrink-0" />
-                          <p className="text-sm text-white truncate font-medium">
-                            {session.title}
+      {/* Chat History */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="p-4 pb-2">
+          <h3 className="text-sm font-semibold text-white">Chat History</h3>
+        </div>
+        
+        <ScrollArea className="flex-1 px-2">
+          {isLoading ? (
+            <div className="p-4 text-center text-muted-foreground">
+              Loading chats...
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              No chat history yet
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {sessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`group relative rounded-lg p-3 cursor-pointer transition-colors ${
+                    currentSessionId === session.id
+                      ? 'bg-primary/20 border border-primary/40'
+                      : 'hover:bg-primary/10'
+                  }`}
+                  onClick={() => onSessionSelect(session.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      {editingId === session.id ? (
+                        <Input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onBlur={() => handleEditSubmit(session.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleEditSubmit(session.id);
+                            } else if (e.key === 'Escape') {
+                              setEditingId(null);
+                            }
+                          }}
+                          className="text-sm bg-transparent border-primary/30"
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 mb-1">
+                            <MessageSquare className="w-3 h-3 text-primary flex-shrink-0" />
+                            <p className="text-sm text-white truncate font-medium">
+                              {session.title}
+                            </p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(session.updated_at)} • {session.message_count} messages
                           </p>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(session.updated_at)} • {session.message_count} messages
-                        </p>
-                      </>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingId(session.id);
-                        setEditTitle(session.title);
-                      }}
-                      variant="ghost"
-                      size="sm"
-                      className="w-6 h-6 p-0 text-muted-foreground hover:text-white"
-                      title="Rename chat"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteSession(session.id);
-                      }}
-                      variant="ghost"
-                      size="sm"
-                      className="w-6 h-6 p-0 text-muted-foreground hover:text-destructive"
-                      title="Delete chat"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                        </>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingId(session.id);
+                          setEditTitle(session.title);
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-6 h-6 p-0 text-muted-foreground hover:text-white"
+                        title="Rename chat"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-6 h-6 p-0 text-muted-foreground hover:text-destructive"
+                        title="Delete chat"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </ScrollArea>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
     </div>
   );
 };

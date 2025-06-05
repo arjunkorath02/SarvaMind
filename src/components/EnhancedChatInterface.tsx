@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, LogOut, Plus, Upload, Menu } from 'lucide-react';
+import { Send, User, Bot, LogOut, Plus, Upload, Menu, Image as ImageIcon, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -78,7 +78,6 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
       if (currentSessionId) {
         query = query.eq('session_id', currentSessionId);
       } else {
-        // Load messages without session_id (legacy messages)
         query = query.is('session_id', null);
       }
 
@@ -92,7 +91,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
           variant: "destructive"
         });
       } else {
-        const formattedMessages: Message[] = data.map((msg: any) => ({
+        const formattedMessages: Message[] = (data || []).map((msg: any) => ({
           id: msg.id,
           content: msg.content,
           sender: msg.sender as 'user' | 'ai',
@@ -105,7 +104,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         if (formattedMessages.length === 0 && !currentSessionId) {
           const welcomeMessage: Message = {
             id: 'welcome',
-            content: 'Hello! I\'m your enhanced AI assistant powered by Sarvam AI. I can help with text, images, documents, voice messages, and even translate between languages. How can I assist you today?',
+            content: 'Hello! I\'m your enhanced AI assistant powered by Sarvam AI. I can help with text, images, documents, voice messages, translation between Indian languages, and even generate/edit images. How can I assist you today?',
             sender: 'ai',
             timestamp: new Date(),
             session_id: 'welcome'
@@ -153,7 +152,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     };
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('chat_sessions')
         .insert({
           user_id: user.id,
@@ -174,12 +173,16 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     }
   };
 
+  const getConversationHistory = (): string => {
+    const recentMessages = messages.slice(-6); // Get last 6 messages for context
+    return recentMessages.map(msg => `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n');
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() && selectedFiles.length === 0 || isLoading) return;
 
     let sessionId = currentSessionId;
 
-    // Create new session if this is the first message
     if (!sessionId && inputValue.trim()) {
       sessionId = await createNewSession(inputValue);
       setCurrentSessionId(sessionId);
@@ -208,8 +211,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
 
     setTimeout(async () => {
       try {
-        // Use improved Sarvam AI with echo prevention
-        const aiResponse = await sarvamAI.sendMessage(messageContent || 'User shared media files');
+        const conversationHistory = getConversationHistory();
+        const contextualPrompt = conversationHistory 
+          ? `Previous conversation:\n${conversationHistory}\n\nCurrent message: ${messageContent || 'User shared media files'}`
+          : messageContent || 'User shared media files';
+
+        const aiResponse = await sarvamAI.sendMessage(contextualPrompt);
         
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -245,7 +252,6 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     setSelectedFiles([]);
     setShowMediaUpload(false);
 
-    // Add welcome message
     const welcomeMessage: Message = {
       id: 'welcome-new',
       content: 'What can I help with?',
@@ -322,55 +328,64 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   }
 
   return (
-    <div className="flex h-screen bg-black relative">
+    <div className="flex h-screen bg-black relative overflow-hidden">
       {/* Hamburger Menu Button */}
       <Button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         variant="ghost"
         size="sm"
-        className="fixed top-4 left-4 z-50 text-muted-foreground hover:text-white glass-card glow-subtle"
+        className="fixed top-4 left-4 z-50 text-muted-foreground hover:text-white glass-card glow-subtle md:hidden"
         title="Toggle sidebar"
       >
         <Menu className="w-5 h-5" />
       </Button>
 
-      {/* Sidebar Overlay */}
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block">
+        <ChatSidebar 
+          user={user} 
+          currentSessionId={currentSessionId} 
+          onSessionSelect={handleSessionSelect} 
+          onNewChat={handleNewChat} 
+        />
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden" 
           onClick={() => setSidebarOpen(false)} 
         />
       )}
 
-      {/* Sliding Sidebar */}
-      <div className={`fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out ${
+      {/* Mobile Sliding Sidebar */}
+      <div className={`fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="w-80 h-full bg-black/40 backdrop-blur-lg border-r border-primary/20">
-          <ChatSidebar 
-            user={user} 
-            currentSessionId={currentSessionId} 
-            onSessionSelect={handleSessionSelect} 
-            onNewChat={handleNewChat} 
-          />
-        </div>
+        <ChatSidebar 
+          user={user} 
+          currentSessionId={currentSessionId} 
+          onSessionSelect={handleSessionSelect} 
+          onNewChat={handleNewChat} 
+        />
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col relative rounded-none bg-black">
+      <div className="flex-1 flex flex-col relative bg-black min-w-0">
         {/* Chat Header */}
         <div className="glass-card rounded-none border-x-0 border-t-0 p-4 sticky top-0 z-10">
-          <div className="flex items-center justify-between ml-16">
+          <div className="flex items-center justify-between md:ml-0 ml-16">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full glass flex items-center justify-center glow-subtle">
                 <Bot className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <h2 className="font-semibold text-white">SarvaMind</h2>
+                <p className="text-xs text-muted-foreground">AI Assistant with contextual memory</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground hidden sm:block">
                 {user.email}
               </span>
               <Button
@@ -386,7 +401,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         </div>
 
         {/* Messages Area */}
-        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-40">
+        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-32">
           <div className="space-y-6 max-w-4xl mx-auto">
             {messages.map((message) => (
               <div key={message.id} className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -396,13 +411,13 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                   </div>
                 )}
                 
-                <div className={`max-w-[70%] ${message.sender === 'user' ? 'order-first' : ''}`}>
+                <div className={`max-w-[85%] sm:max-w-[70%] ${message.sender === 'user' ? 'order-first' : ''}`}>
                   <div className={`glass-card rounded-2xl p-4 ${
                     message.sender === 'user' 
                       ? 'bg-gradient-to-r from-primary/20 to-accent/20 glow-subtle border-primary/30' 
                       : 'border-primary/20'
                   }`}>
-                    <p className="text-white leading-relaxed">{message.content}</p>
+                    <p className="text-white leading-relaxed break-words">{message.content}</p>
                     
                     {/* Media Files */}
                     {message.mediaFiles && message.mediaFiles.length > 0 && (
@@ -455,7 +470,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                 <div className="w-8 h-8 rounded-full glass flex items-center justify-center glow-subtle flex-shrink-0">
                   <Bot className="w-4 h-4 text-primary" />
                 </div>
-                <div className="glass-card rounded-2xl p-4 max-w-[70%] border-primary/20">
+                <div className="glass-card rounded-2xl p-4 max-w-[85%] sm:max-w-[70%] border-primary/20">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 bg-primary rounded-full typing-dot"></div>
                     <div className="w-2 h-2 bg-primary rounded-full typing-dot"></div>
@@ -467,12 +482,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
           </div>
         </ScrollArea>
 
-        {/* Floating Input Area with Glassmorphism */}
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-4 z-30">
-          <div className="space-y-4 rounded-full bg-[#1e1e1e]/15">
+        {/* Floating Input Area with Enhanced Glassmorphism */}
+        <div className="fixed bottom-4 left-4 right-4 md:left-1/2 md:transform md:-translate-x-1/2 md:w-full md:max-w-4xl md:px-4 z-30">
+          <div className="space-y-4">
             {/* Media Upload Area */}
             {showMediaUpload && (
-              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
+              <div className="backdrop-blur-xl bg-white/5 rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
                 <MediaUpload 
                   onFilesSelected={setSelectedFiles} 
                   selectedFiles={selectedFiles}
@@ -482,21 +497,21 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
             )}
 
             {/* Input Container with Enhanced Glassmorphism */}
-            <div className="backdrop-blur-xl p-4 border border-primary/30 shadow-2xl glow-subtle rounded-full bg-[#272727]/[0.21]">
-              <div className="space-y-3 rounded-full">
+            <div className="backdrop-blur-xl bg-[rgba(255,255,255,0.05)] p-4 border border-primary/30 shadow-2xl glow-subtle rounded-2xl">
+              <div className="space-y-3">
                 {/* Text Input */}
                 <Textarea
                   ref={textareaRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Ask anything"
+                  placeholder="Ask anything... (Shift+Enter for new line)"
                   disabled={isLoading}
-                  className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-30 bg-black/[0.41] mx-0 px-[15px] py-[4px] my-[9px] rounded-full"
+                  className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-32 bg-transparent"
                 />
                 
                 {/* Controls */}
-                <div className="flex items-center justify-between my-0 py-0 px-[19px] mx-[4px] rounded-full">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Button
                       onClick={() => setShowMediaUpload(!showMediaUpload)}
@@ -507,6 +522,15 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                     >
                       <Upload className="w-4 h-4" />
                     </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-white"
+                      title="Generate image"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </Button>
                     
                     <AudioRecorder onAudioRecorded={handleAudioRecorded} />
                   </div>
@@ -514,7 +538,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                   <Button
                     onClick={handleSendMessage}
                     disabled={(!inputValue.trim() && selectedFiles.length === 0) || isLoading}
-                    className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-105 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex-shrink-0 font-normal"
+                    className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-105 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex-shrink-0"
                   >
                     <Send className="w-4 h-4" />
                   </Button>

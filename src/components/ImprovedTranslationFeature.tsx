@@ -11,19 +11,23 @@ interface ImprovedTranslationFeatureProps {
   onTranslate: (translatedText: string, targetLang: string) => void;
 }
 
-const languages = [
+const indianLanguages = [
   { code: 'en-IN', name: 'English' },
-  { code: 'hi-IN', name: 'Hindi' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'ar', name: 'Arabic' },
+  { code: 'hi-IN', name: 'Hindi (हिंदी)' },
+  { code: 'ta-IN', name: 'Tamil (தமிழ்)' },
+  { code: 'te-IN', name: 'Telugu (తెలుగు)' },
+  { code: 'kn-IN', name: 'Kannada (ಕನ್ನಡ)' },
+  { code: 'ml-IN', name: 'Malayalam (മലയാളം)' },
+  { code: 'mr-IN', name: 'Marathi (मराठी)' },
+  { code: 'bn-IN', name: 'Bengali (বাংলা)' },
+  { code: 'gu-IN', name: 'Gujarati (ગુજરાતી)' },
+  { code: 'or-IN', name: 'Odia (ଓଡ଼ିଆ)' },
+  { code: 'pa-IN', name: 'Punjabi (ਪੰਜਾਬੀ)' },
+  { code: 'as-IN', name: 'Assamese (অসমীয়া)' },
+  { code: 'ur-IN', name: 'Urdu (اردو)' },
+  { code: 'sa-IN', name: 'Sanskrit (संस्कृत)' },
+  { code: 'ne-IN', name: 'Nepali (नेपाली)' },
+  { code: 'si-IN', name: 'Sinhala (සිංහල)' },
 ];
 
 const ImprovedTranslationFeature: React.FC<ImprovedTranslationFeatureProps> = ({ text, onTranslate }) => {
@@ -53,7 +57,7 @@ const ImprovedTranslationFeature: React.FC<ImprovedTranslationFeatureProps> = ({
   };
 
   const getLanguageName = (code: string) => {
-    return languages.find(lang => lang.code === code)?.name || code;
+    return indianLanguages.find(lang => lang.code === code)?.name || code;
   };
 
   return (
@@ -71,7 +75,7 @@ const ImprovedTranslationFeature: React.FC<ImprovedTranslationFeatureProps> = ({
 
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleContent className="space-y-3">
-          <div className="glass-card p-3 rounded-lg space-y-3">
+          <div className="glass-card p-3 rounded-lg space-y-3 backdrop-blur-xl">
             {/* Language Detection */}
             {detectedLanguage && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -86,8 +90,8 @@ const ImprovedTranslationFeature: React.FC<ImprovedTranslationFeatureProps> = ({
                 <SelectTrigger className="flex-1 bg-transparent border-primary/30">
                   <SelectValue placeholder="Select target language" />
                 </SelectTrigger>
-                <SelectContent>
-                  {languages.map((lang) => (
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {indianLanguages.map((lang) => (
                     <SelectItem key={lang.code} value={lang.code}>
                       {lang.name}
                     </SelectItem>
@@ -127,7 +131,7 @@ const ImprovedTranslationFeature: React.FC<ImprovedTranslationFeatureProps> = ({
                         Original ({getLanguageName(detectedLanguage || 'en-IN')})
                       </span>
                     </div>
-                    <p className="text-sm text-white">{text}</p>
+                    <p className="text-sm text-white break-words">{text}</p>
                   </div>
                 )}
 
@@ -138,7 +142,7 @@ const ImprovedTranslationFeature: React.FC<ImprovedTranslationFeatureProps> = ({
                       Translation ({getLanguageName(targetLanguage)})
                     </span>
                   </div>
-                  <p className="text-sm text-white">{translatedText}</p>
+                  <p className="text-sm text-white break-words">{translatedText}</p>
                 </div>
               </div>
             )}
