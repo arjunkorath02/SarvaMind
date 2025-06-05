@@ -1,7 +1,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileText, Image, Video, Music } from 'lucide-react';
+import { Upload, X, FileText, Image, Video, Music, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ interface MediaFile {
   id: string;
   file: File;
   preview?: string;
-  type: 'image' | 'video' | 'document' | 'audio';
+  type: 'image' | 'video' | 'document' | 'audio' | 'archive';
   url?: string;
 }
 
@@ -23,10 +23,14 @@ interface MediaUploadProps {
 const MediaUpload: React.FC<MediaUploadProps> = ({ onFilesSelected, selectedFiles, onRemoveFile }) => {
   const [uploading, setUploading] = useState(false);
 
-  const getFileType = (file: File): 'image' | 'video' | 'document' | 'audio' => {
+  const getFileType = (file: File): 'image' | 'video' | 'document' | 'audio' | 'archive' => {
     if (file.type.startsWith('image/')) return 'image';
     if (file.type.startsWith('video/')) return 'video';
     if (file.type.startsWith('audio/')) return 'audio';
+    if (file.type === 'application/zip' || file.type === 'application/x-zip-compressed' || 
+        file.type === 'application/x-rar-compressed' || file.type === 'application/x-7z-compressed') {
+      return 'archive';
+    }
     return 'document';
   };
 
@@ -35,6 +39,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({ onFilesSelected, selectedFile
       case 'image': return <Image className="w-4 h-4" />;
       case 'video': return <Video className="w-4 h-4" />;
       case 'audio': return <Music className="w-4 h-4" />;
+      case 'archive': return <Archive className="w-4 h-4" />;
       default: return <FileText className="w-4 h-4" />;
     }
   };
@@ -113,6 +118,10 @@ const MediaUpload: React.FC<MediaUploadProps> = ({ onFilesSelected, selectedFile
       'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
       'text/plain': ['.txt'],
+      'application/zip': ['.zip'],
+      'application/x-zip-compressed': ['.zip'],
+      'application/x-rar-compressed': ['.rar'],
+      'application/x-7z-compressed': ['.7z'],
     },
     maxSize: 50 * 1024 * 1024, // 50MB
   });
@@ -129,7 +138,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({ onFilesSelected, selectedFile
               {mediaFile.type === 'video' && (
                 <video src={mediaFile.preview} className="w-12 h-12 object-cover rounded" />
               )}
-              {(mediaFile.type === 'document' || mediaFile.type === 'audio') && (
+              {(mediaFile.type === 'document' || mediaFile.type === 'audio' || mediaFile.type === 'archive') && (
                 <div className="w-12 h-12 glass rounded flex items-center justify-center">
                   {getFileIcon(mediaFile.type)}
                 </div>
@@ -138,6 +147,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({ onFilesSelected, selectedFile
                 <p className="text-sm text-white truncate">{mediaFile.file.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {(mediaFile.file.size / 1024 / 1024).toFixed(2)} MB
+                  {mediaFile.type === 'archive' && ' (Archive)'}
                 </p>
               </div>
               <Button
@@ -167,7 +177,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({ onFilesSelected, selectedFile
               {uploading ? 'Uploading...' : isDragActive ? 'Drop files here' : 'Drag files or click to upload'}
             </p>
             <p className="text-xs text-muted-foreground">
-              Images, videos, documents, audio (max 50MB)
+              Images, videos, documents, audio, ZIP files (max 50MB)
             </p>
           </div>
         </div>

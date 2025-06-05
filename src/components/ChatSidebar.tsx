@@ -41,7 +41,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const loadChatSessions = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('chat_sessions')
         .select('id, title, created_at, updated_at')
         .eq('user_id', user.id)
@@ -94,7 +94,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     try {
       const title = firstMessage ? generateChatTitle(firstMessage) : 'New Chat';
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('chat_sessions')
         .insert({
           user_id: user.id,
@@ -118,7 +118,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const updateSessionTitle = async (sessionId: string, newTitle: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('chat_sessions')
         .update({ title: newTitle })
         .eq('id', sessionId);
@@ -141,7 +141,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const deleteSession = async (sessionId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('chat_sessions')
         .delete()
         .eq('id', sessionId);
@@ -219,8 +219,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       <div className="p-4 border-b border-primary/20">
         {/* Profile Section */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full glass flex items-center justify-center glow-subtle">
-            <User className="w-5 h-5 text-primary" />
+          <div className="w-10 h-10 rounded-full overflow-hidden glow-subtle">
+            <img 
+              src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
+              alt="SarvaMind"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{user.email}</p>

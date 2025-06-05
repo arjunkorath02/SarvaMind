@@ -29,13 +29,37 @@ interface MediaFile {
   id: string;
   file: File;
   preview?: string;
-  type: 'image' | 'video' | 'document' | 'audio';
+  type: 'image' | 'video' | 'document' | 'audio' | 'archive';
   url?: string;
 }
 
 interface EnhancedChatInterfaceProps {
   user: SupabaseUser;
 }
+
+const formatAIResponse = (content: string): string => {
+  // Convert numbered lists
+  content = content.replace(/^(\d+)\.\s+(.+$)/gm, '<li>$2</li>');
+  
+  // Convert bullet points
+  content = content.replace(/^[-•]\s+(.+$)/gm, '<li>$1</li>');
+  
+  // Wrap consecutive list items in <ol> or <ul>
+  content = content.replace(/(<li>.*<\/li>)/gs, (match) => {
+    const hasNumbers = /^\d+\./.test(match);
+    const tag = hasNumbers ? 'ol' : 'ul';
+    return `<${tag}>${match}</${tag}>`;
+  });
+  
+  // Convert line breaks to paragraphs for better formatting
+  content = content.replace(/\n\n/g, '</p><p>');
+  content = `<p>${content}</p>`;
+  
+  // Clean up empty paragraphs
+  content = content.replace(/<p><\/p>/g, '');
+  
+  return content;
+};
 
 const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   user
@@ -104,7 +128,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         if (formattedMessages.length === 0 && !currentSessionId) {
           const welcomeMessage: Message = {
             id: 'welcome',
-            content: 'Hello! I\'m your enhanced AI assistant powered by Sarvam AI. I can help with text, images, documents, voice messages, translation between Indian languages, and even generate/edit images. How can I assist you today?',
+            content: 'Hello! I\'m SarvaMind, your enhanced AI assistant. I can help with text, images, documents, voice messages, translation between Indian languages, and even generate/edit images. How can I assist you today?',
             sender: 'ai',
             timestamp: new Date(),
             session_id: 'welcome'
@@ -152,7 +176,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     };
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('chat_sessions')
         .insert({
           user_id: user.id,
@@ -217,10 +241,11 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
           : messageContent || 'User shared media files';
 
         const aiResponse = await sarvamAI.sendMessage(contextualPrompt);
+        const formattedResponse = formatAIResponse(aiResponse);
         
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: aiResponse,
+          content: formattedResponse,
           sender: 'ai',
           timestamp: new Date(),
           session_id: sessionId
@@ -230,7 +255,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         setMessages(prev => [...prev, aiMessage]);
         setIsLoading(false);
 
-        await saveMessageToDatabase(aiResponse, 'ai', sessionId);
+        await saveMessageToDatabase(formattedResponse, 'ai', sessionId);
       } catch (error) {
         console.error('Error getting AI response:', error);
         setIsTyping(false);
@@ -320,7 +345,13 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     return (
       <div className="flex h-screen bg-black items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full glass animate-pulse glow"></div>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden animate-pulse glow">
+            <img 
+              src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
+              alt="SarvaMind"
+              className="w-full h-full object-cover"
+            />
+          </div>
           <p className="text-muted-foreground">Loading your chat history...</p>
         </div>
       </div>
@@ -376,8 +407,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
         <div className="glass-card rounded-none border-x-0 border-t-0 p-4 sticky top-0 z-10">
           <div className="flex items-center justify-between md:ml-0 ml-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full glass flex items-center justify-center glow-subtle">
-                <Bot className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-full overflow-hidden glow-subtle">
+                <img 
+                  src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
+                  alt="SarvaMind"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h2 className="font-semibold text-white">SarvaMind</h2>
@@ -406,8 +441,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
             {messages.map((message) => (
               <div key={message.id} className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {message.sender === 'ai' && (
-                  <div className="w-8 h-8 rounded-full glass flex items-center justify-center glow-subtle flex-shrink-0">
-                    <Bot className="w-4 h-4 text-primary" />
+                  <div className="w-8 h-8 rounded-full overflow-hidden glow-subtle flex-shrink-0">
+                    <img 
+                      src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
+                      alt="SarvaMind"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 )}
                 
@@ -417,7 +456,14 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                       ? 'bg-gradient-to-r from-primary/20 to-accent/20 glow-subtle border-primary/30' 
                       : 'border-primary/20'
                   }`}>
-                    <p className="text-white leading-relaxed break-words">{message.content}</p>
+                    {message.sender === 'ai' && message.content.includes('<') ? (
+                      <div 
+                        className="text-white leading-relaxed break-words prose prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{ __html: message.content }}
+                      />
+                    ) : (
+                      <p className="text-white leading-relaxed break-words">{message.content}</p>
+                    )}
                     
                     {/* Media Files */}
                     {message.mediaFiles && message.mediaFiles.length > 0 && (
@@ -433,7 +479,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                             {file.type === 'audio' && file.url && (
                               <audio src={file.url} controls className="w-full" />
                             )}
-                            {file.type === 'document' && (
+                            {(file.type === 'document' || file.type === 'archive') && (
                               <p className="text-sm text-muted-foreground">{file.file.name}</p>
                             )}
                           </div>
@@ -467,8 +513,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
             {/* Thinking Indicator */}
             {isTyping && (
               <div className="flex gap-3 justify-start max-w-4xl mx-auto">
-                <div className="w-8 h-8 rounded-full glass flex items-center justify-center glow-subtle flex-shrink-0">
-                  <Bot className="w-4 h-4 text-primary" />
+                <div className="w-8 h-8 rounded-full overflow-hidden glow-subtle flex-shrink-0">
+                  <img 
+                    src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
+                    alt="SarvaMind"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="glass-card rounded-2xl p-4 max-w-[85%] sm:max-w-[70%] border-primary/20">
                   <div className="flex gap-1">

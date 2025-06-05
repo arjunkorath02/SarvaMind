@@ -1,142 +1,179 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 98%;
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  
+  --primary: 220 70% 50%;
+  --primary-foreground: 220 70% 98%;
+  --accent: 280 65% 60%;
+  --accent-foreground: 280 65% 98%;
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --border: 217.2 32.6% 17.5%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 220 70% 50%;
+  --radius: 0.5rem;
 
-    --card: 240 10% 8%;
-    --card-foreground: 0 0% 98%;
+  color-scheme: dark;
+}
 
-    --popover: 240 10% 5%;
-    --popover-foreground: 0 0% 98%;
+* {
+  border-color: hsl(var(--border));
+}
 
-    --primary: 259 100% 65%;
-    --primary-foreground: 0 0% 98%;
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-    --secondary: 240 10% 12%;
-    --secondary-foreground: 0 0% 98%;
+/* Enhanced Glassmorphism Effects */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
-    --muted: 240 10% 10%;
-    --muted-foreground: 240 5% 65%;
+.glass-card {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
 
-    --accent: 324 100% 75%;
-    --accent-foreground: 0 0% 5%;
+.glass-input {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+/* Enhanced Glow Effects */
+.glow {
+  box-shadow: 0 0 20px rgba(66, 153, 225, 0.5), 0 0 40px rgba(66, 153, 225, 0.3);
+}
 
-    --border: 240 10% 15%;
-    --input: 240 10% 12%;
-    --ring: 259 100% 65%;
+.glow-subtle {
+  box-shadow: 0 0 10px rgba(66, 153, 225, 0.2), 0 0 20px rgba(66, 153, 225, 0.1);
+}
 
-    --radius: 1rem;
+/* Typing Animation */
+.typing-dot {
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Smooth Transitions */
+* {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-black text-foreground font-sans;
-    font-family: 'Inter', system-ui, sans-serif;
-  }
-
-  .glass {
-    background: rgba(138, 43, 226, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(138, 43, 226, 0.2);
-  }
-
+/* Mobile Optimizations */
+@media (max-width: 768px) {
   .glass-card {
-    background: rgba(138, 43, 226, 0.05);
-    backdrop-filter: blur(25px);
-    border: 1px solid rgba(138, 43, 226, 0.15);
+    backdrop-filter: blur(12px);
   }
-
+  
   .glass-input {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(30px);
-    border: 1px solid rgba(138, 43, 226, 0.3);
-  }
-
-  .glow {
-    box-shadow: 0 0 30px rgba(138, 43, 226, 0.4);
-  }
-
-  .glow-subtle {
-    box-shadow: 0 0 15px rgba(138, 43, 226, 0.2);
-  }
-
-  .glow-pink {
-    box-shadow: 0 0 20px rgba(244, 114, 182, 0.3);
+    backdrop-filter: blur(15px);
   }
 }
 
-@layer utilities {
-  .animate-glow {
-    animation: glow 2s ease-in-out infinite alternate;
-  }
+/* Prose styling for AI responses */
+.prose {
+  max-width: none;
+}
 
-  @keyframes glow {
-    from {
-      box-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
-    }
-    to {
-      box-shadow: 0 0 30px rgba(138, 43, 226, 0.6);
-    }
-  }
+.prose p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
 
-  .typing-dot {
-    animation: typing 1.4s infinite ease-in-out;
-  }
+.prose ol, .prose ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
 
-  .typing-dot:nth-child(1) {
-    animation-delay: -0.32s;
-  }
+.prose li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
 
-  .typing-dot:nth-child(2) {
-    animation-delay: -0.16s;
-  }
+.prose ol {
+  list-style-type: decimal;
+}
 
-  @keyframes typing {
-    0%, 80%, 100% {
-      transform: scale(0);
-      opacity: 0.5;
-    }
-    40% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
+.prose ul {
+  list-style-type: disc;
+}
 
-  /* Enhanced glassmorphism effects */
+.prose li::marker {
+  color: hsl(var(--primary));
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Floating input area responsive design */
+@media (max-width: 640px) {
+  .fixed.bottom-4.left-4.right-4 {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+  }
+}
+
+/* Enhanced mobile responsiveness */
+@media (max-width: 480px) {
+  .glass-card {
+    border-radius: 1rem;
+    padding: 0.75rem;
+  }
+  
   .backdrop-blur-xl {
-    backdrop-filter: blur(24px);
-  }
-
-  .backdrop-blur-lg {
-    backdrop-filter: blur(16px);
-  }
-
-  .backdrop-blur-sm {
-    backdrop-filter: blur(4px);
-  }
-
-  /* Smooth transitions for sidebar */
-  .transition-transform {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Enhanced shadow effects */
-  .shadow-2xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
   }
 }
