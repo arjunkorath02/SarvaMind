@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, LogOut, Plus, Upload, Menu, Image as ImageIcon, Mic } from 'lucide-react';
+import { Send, User, LogOut, Upload, Image as ImageIcon, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,8 +20,6 @@ interface Message {
   sender: 'user' | 'ai';
   timestamp: Date;
   mediaFiles?: MediaFile[];
-  translatedText?: string;
-  targetLanguage?: string;
   session_id: string;
 }
 
@@ -121,13 +120,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
 
       if (error) {
         console.error('Error loading chat history:', error);
-        toast({
-          title: "Error loading chat history",
-          description: "Could not load your previous messages.",
-          variant: "destructive"
-        });
       } else {
-        const formattedMessages: Message[] = (data || []).map((msg: any) => ({
+        const formattedMessages: Message[] = (data || []).map((msg) => ({
           id: msg.id,
           content: msg.content,
           sender: msg.sender as 'user' | 'ai',
@@ -157,7 +151,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
 
   const saveMessageToDatabase = async (content: string, sender: 'user' | 'ai', sessionId: string) => {
     try {
-      const messageData: any = {
+      const messageData: Record<string, any> = {
         user_id: user.id,
         content,
         sender
@@ -178,17 +172,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   };
 
   const createNewSession = async (firstMessage: string): Promise<string> => {
-    const generateTitle = (message: string): string => {
-      const words = message.trim().split(' ').slice(0, 4);
-      let title = words.join(' ');
-      if (message.length > 30) {
-        title += '...';
-      }
-      return title || 'New Chat';
-    };
-
     try {
-      // Generate a simple session ID using timestamp and random string
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
       return sessionId;
     } catch (error) {
@@ -198,11 +182,10 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   };
 
   const getConversationHistory = (): string => {
-    // Get recent messages but filter out repeated greetings
     const recentMessages = messages
       .filter(msg => !msg.content.toLowerCase().includes("i'm sarvamind") && 
                      !msg.content.toLowerCase().includes("how can i help"))
-      .slice(-4); // Reduced to 4 messages for better context
+      .slice(-4);
     
     return recentMessages
       .map(msg => `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
@@ -241,15 +224,18 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     await saveMessageToDatabase(messageContent || 'Shared media files', 'user', sessionId);
 
     try {
+      console.log('Sending message to AI:', messageContent);
+      
       const conversationHistory = getConversationHistory();
       let contextualPrompt = messageContent || 'User shared media files';
       
-      // Only add context if there's meaningful conversation history
       if (conversationHistory && conversationHistory.trim().length > 0) {
         contextualPrompt = `Context: ${conversationHistory}\n\nCurrent: ${messageContent || 'User shared media files'}`;
       }
 
       const aiResponse = await sarvamAI.sendMessage(contextualPrompt);
+      console.log('AI Response received:', aiResponse);
+      
       const formattedResponse = formatAIResponse(aiResponse);
       
       const aiMessage: Message = {
@@ -268,7 +254,6 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     } catch (error) {
       console.error('Error getting AI response:', error);
       
-      // Add fallback AI response
       const fallbackMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: "I apologize, but I'm having trouble processing your request right now. Please try again.",
@@ -479,7 +464,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                 )}
                 
                 <div className={`max-w-[85%] sm:max-w-[70%] ${message.sender === 'user' ? 'order-first' : ''}`}>
-                  <div className={`glass-card rounded-2xl p-4 mb-4 ${
+                  <div className={`glass-card rounded-2xl p-4 mb-6 ${
                     message.sender === 'user' 
                       ? 'bg-gradient-to-r from-primary/20 to-accent/20 glow-subtle border-primary/30' 
                       : 'border-primary/20'
@@ -517,7 +502,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
                   </div>
                   
                   {/* Message metadata and actions with proper spacing */}
-                  <div className="flex items-center justify-between px-2 mb-4">
+                  <div className="flex items-center justify-between px-2 mb-6">
                     <p className="text-xs text-muted-foreground">
                       {formatTime(message.timestamp)}
                     </p>

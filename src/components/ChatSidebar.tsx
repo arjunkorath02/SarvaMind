@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -31,8 +30,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,44 +38,40 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const loadChatSessions = async () => {
     try {
-      // First, try to query the chat_sessions table
-      const { data: sessionsData, error: sessionsError } = await supabase
+      const { data: messagesData, error } = await supabase
         .from('messages')
         .select('session_id, content, created_at')
         .eq('user_id', user.id)
         .not('session_id', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (sessionsError) {
-        console.error('Error loading chat sessions:', sessionsError);
-        toast({
-          title: "Error loading chat history",
-          description: "Could not load your chat sessions.",
-          variant: "destructive",
-        });
+      if (error) {
+        console.error('Error loading chat sessions:', error);
         setSessions([]);
       } else {
-        // Group messages by session_id and create session objects
-        const sessionMap = new Map();
+        // Group messages by session_id
+        const sessionMap = new Map<string, ChatSession>();
         
-        (sessionsData || []).forEach((msg: any) => {
-          const sessionId = msg.session_id;
-          if (!sessionMap.has(sessionId)) {
-            sessionMap.set(sessionId, {
-              id: sessionId,
-              title: generateChatTitle(msg.content),
-              created_at: msg.created_at,
-              updated_at: msg.created_at,
-              message_count: 1
-            });
-          } else {
-            const session = sessionMap.get(sessionId);
-            session.message_count += 1;
-            if (new Date(msg.created_at) > new Date(session.updated_at)) {
-              session.updated_at = msg.created_at;
+        if (messagesData) {
+          messagesData.forEach((msg) => {
+            const sessionId = msg.session_id;
+            if (sessionId && !sessionMap.has(sessionId)) {
+              sessionMap.set(sessionId, {
+                id: sessionId,
+                title: generateChatTitle(msg.content || ''),
+                created_at: msg.created_at,
+                updated_at: msg.created_at,
+                message_count: 1
+              });
+            } else if (sessionId && sessionMap.has(sessionId)) {
+              const session = sessionMap.get(sessionId)!;
+              session.message_count += 1;
+              if (new Date(msg.created_at) > new Date(session.updated_at)) {
+                session.updated_at = msg.created_at;
+              }
             }
-          }
-        });
+          });
+        }
 
         const formattedSessions = Array.from(sessionMap.values()).sort((a, b) => 
           new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
