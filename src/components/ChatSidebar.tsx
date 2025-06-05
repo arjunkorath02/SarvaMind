@@ -41,41 +41,54 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const loadChatSessions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('chat_sessions' as any)
-        .select('id, title, created_at, updated_at')
+      // First, try to query the chat_sessions table
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('messages')
+        .select('session_id, content, created_at')
         .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
+        .not('session_id', 'is', null)
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading chat sessions:', error);
+      if (sessionsError) {
+        console.error('Error loading chat sessions:', sessionsError);
         toast({
           title: "Error loading chat history",
           description: "Could not load your chat sessions.",
           variant: "destructive",
         });
+        setSessions([]);
       } else {
-        // Get message count for each session
-        const sessionsWithCount = await Promise.all(
-          (data || []).map(async (session: any) => {
-            const { count } = await supabase
-              .from('messages')
-              .select('*', { count: 'exact', head: true })
-              .eq('session_id', session.id);
-            
-            return {
-              id: session.id,
-              title: session.title,
-              created_at: session.created_at,
-              updated_at: session.updated_at,
-              message_count: count || 0
-            };
-          })
+        // Group messages by session_id and create session objects
+        const sessionMap = new Map();
+        
+        (sessionsData || []).forEach((msg: any) => {
+          const sessionId = msg.session_id;
+          if (!sessionMap.has(sessionId)) {
+            sessionMap.set(sessionId, {
+              id: sessionId,
+              title: generateChatTitle(msg.content),
+              created_at: msg.created_at,
+              updated_at: msg.created_at,
+              message_count: 1
+            });
+          } else {
+            const session = sessionMap.get(sessionId);
+            session.message_count += 1;
+            if (new Date(msg.created_at) > new Date(session.updated_at)) {
+              session.updated_at = msg.created_at;
+            }
+          }
+        });
+
+        const formattedSessions = Array.from(sessionMap.values()).sort((a, b) => 
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         );
-        setSessions(sessionsWithCount);
+
+        setSessions(formattedSessions);
       }
     } catch (error) {
       console.error('Error loading chat sessions:', error);
+      setSessions([]);
     } finally {
       setIsLoading(false);
     }
@@ -90,61 +103,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     return title || 'New Chat';
   };
 
-  const createNewSession = async (firstMessage?: string) => {
-    try {
-      const title = firstMessage ? generateChatTitle(firstMessage) : 'New Chat';
-      
-      const { data, error } = await supabase
-        .from('chat_sessions' as any)
-        .insert({
-          user_id: user.id,
-          title
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating chat session:', error);
-        return null;
-      }
-
-      await loadChatSessions();
-      return data.id;
-    } catch (error) {
-      console.error('Error creating chat session:', error);
-      return null;
-    }
-  };
-
-  const updateSessionTitle = async (sessionId: string, newTitle: string) => {
-    try {
-      const { error } = await supabase
-        .from('chat_sessions' as any)
-        .update({ title: newTitle })
-        .eq('id', sessionId);
-
-      if (error) {
-        console.error('Error updating session title:', error);
-        toast({
-          title: "Error updating title",
-          description: "Could not update the chat title.",
-          variant: "destructive",
-        });
-      } else {
-        await loadChatSessions();
-        setEditingId(null);
-      }
-    } catch (error) {
-      console.error('Error updating session title:', error);
-    }
-  };
-
   const deleteSession = async (sessionId: string) => {
     try {
       const { error } = await supabase
-        .from('chat_sessions' as any)
+        .from('messages')
         .delete()
-        .eq('id', sessionId);
+        .eq('session_id', sessionId);
 
       if (error) {
         console.error('Error deleting session:', error);
@@ -165,14 +129,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       }
     } catch (error) {
       console.error('Error deleting session:', error);
-    }
-  };
-
-  const handleEditSubmit = (sessionId: string) => {
-    if (editTitle.trim()) {
-      updateSessionTitle(sessionId, editTitle.trim());
-    } else {
-      setEditingId(null);
     }
   };
 
@@ -281,50 +237,18 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      {editingId === session.id ? (
-                        <Input
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          onBlur={() => handleEditSubmit(session.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleEditSubmit(session.id);
-                            } else if (e.key === 'Escape') {
-                              setEditingId(null);
-                            }
-                          }}
-                          className="text-sm bg-transparent border-primary/30"
-                          autoFocus
-                        />
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-2 mb-1">
-                            <MessageSquare className="w-3 h-3 text-primary flex-shrink-0" />
-                            <p className="text-sm text-white truncate font-medium">
-                              {session.title}
-                            </p>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(session.updated_at)} • {session.message_count} messages
-                          </p>
-                        </>
-                      )}
+                      <div className="flex items-center gap-2 mb-1">
+                        <MessageSquare className="w-3 h-3 text-primary flex-shrink-0" />
+                        <p className="text-sm text-white truncate font-medium">
+                          {session.title}
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(session.updated_at)} • {session.message_count} messages
+                      </p>
                     </div>
                     
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingId(session.id);
-                          setEditTitle(session.title);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        className="w-6 h-6 p-0 text-muted-foreground hover:text-white"
-                        title="Rename chat"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </Button>
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();

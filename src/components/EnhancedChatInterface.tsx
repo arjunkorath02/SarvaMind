@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, LogOut, Plus, Upload, Menu, Image as ImageIcon, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -189,21 +188,9 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     };
 
     try {
-      const { data, error } = await supabase
-        .from('chat_sessions' as any)
-        .insert({
-          user_id: user.id,
-          title: generateTitle(firstMessage)
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating session:', error);
-        return 'temp-session';
-      }
-
-      return data.id;
+      // Generate a simple session ID using timestamp and random string
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      return sessionId;
     } catch (error) {
       console.error('Error creating session:', error);
       return 'temp-session';
@@ -253,38 +240,47 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
 
     await saveMessageToDatabase(messageContent || 'Shared media files', 'user', sessionId);
 
-    setTimeout(async () => {
-      try {
-        const conversationHistory = getConversationHistory();
-        let contextualPrompt = messageContent || 'User shared media files';
-        
-        // Only add context if there's meaningful conversation history
-        if (conversationHistory && conversationHistory.trim().length > 0) {
-          contextualPrompt = `Context: ${conversationHistory}\n\nCurrent: ${messageContent || 'User shared media files'}`;
-        }
-
-        const aiResponse = await sarvamAI.sendMessage(contextualPrompt);
-        const formattedResponse = formatAIResponse(aiResponse);
-        
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: formattedResponse,
-          sender: 'ai',
-          timestamp: new Date(),
-          session_id: sessionId
-        };
-
-        setIsTyping(false);
-        setMessages(prev => [...prev, aiMessage]);
-        setIsLoading(false);
-
-        await saveMessageToDatabase(formattedResponse, 'ai', sessionId);
-      } catch (error) {
-        console.error('Error getting AI response:', error);
-        setIsTyping(false);
-        setIsLoading(false);
+    try {
+      const conversationHistory = getConversationHistory();
+      let contextualPrompt = messageContent || 'User shared media files';
+      
+      // Only add context if there's meaningful conversation history
+      if (conversationHistory && conversationHistory.trim().length > 0) {
+        contextualPrompt = `Context: ${conversationHistory}\n\nCurrent: ${messageContent || 'User shared media files'}`;
       }
-    }, 1500);
+
+      const aiResponse = await sarvamAI.sendMessage(contextualPrompt);
+      const formattedResponse = formatAIResponse(aiResponse);
+      
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: formattedResponse,
+        sender: 'ai',
+        timestamp: new Date(),
+        session_id: sessionId
+      };
+
+      setIsTyping(false);
+      setMessages(prev => [...prev, aiMessage]);
+      setIsLoading(false);
+
+      await saveMessageToDatabase(formattedResponse, 'ai', sessionId);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      
+      // Add fallback AI response
+      const fallbackMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I apologize, but I'm having trouble processing your request right now. Please try again.",
+        sender: 'ai',
+        timestamp: new Date(),
+        session_id: sessionId
+      };
+      
+      setIsTyping(false);
+      setMessages(prev => [...prev, fallbackMessage]);
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
