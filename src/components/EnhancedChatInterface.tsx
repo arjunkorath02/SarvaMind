@@ -421,7 +421,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
 
             {/* Enhanced Input Container */}
             <div className="backdrop-blur-xl p-4 border border-primary/30 shadow-2xl glow-subtle rounded-full bg-transparent">
-              <div className="space-y-3">
+              <div className="space-y-3 rounded-full">
                 {/* Text Input */}
                 <Textarea ref={textareaRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Ask anything... (Shift+Enter for new line)" disabled={isLoading} className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-32 px-[28px] my-0 py-0 bg-transparent" />
                 
