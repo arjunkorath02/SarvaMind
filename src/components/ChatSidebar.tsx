@@ -41,7 +41,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const loadChatSessions = async () => {
     try {
-      const { data, error } = await supabase
+      // Use type assertion to work around TypeScript limitations
+      const { data, error } = await (supabase as any)
         .from('chat_sessions')
         .select(`
           id,
@@ -62,7 +63,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       } else {
         // Get message count for each session
         const sessionsWithCount = await Promise.all(
-          data.map(async (session) => {
+          data.map(async (session: any) => {
             const { count } = await supabase
               .from('messages')
               .select('*', { count: 'exact', head: true })
@@ -100,7 +101,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     try {
       const title = firstMessage ? generateChatTitle(firstMessage) : 'New Chat';
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('chat_sessions')
         .insert({
           user_id: user.id,
@@ -124,7 +125,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const updateSessionTitle = async (sessionId: string, newTitle: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('chat_sessions')
         .update({ title: newTitle })
         .eq('id', sessionId);
@@ -147,7 +148,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const deleteSession = async (sessionId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('chat_sessions')
         .delete()
         .eq('id', sessionId);
