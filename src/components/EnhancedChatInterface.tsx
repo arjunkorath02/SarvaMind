@@ -44,6 +44,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
   const [showMediaUpload, setShowMediaUpload] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isFirstMessage, setIsFirstMessage] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -84,6 +85,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
       if (error) {
         console.error('Error loading chat history:', error);
         setMessages([]);
+        setIsFirstMessage(true);
       } else {
         console.log('Loaded messages:', data);
         const formattedMessages: Message[] = (data || []).map((msg: any) => ({
@@ -95,7 +97,9 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
         }));
 
         setMessages(formattedMessages);
+        setIsFirstMessage(formattedMessages.length === 0);
 
+        // Only show welcome message if no messages exist and no session selected
         if (formattedMessages.length === 0 && !currentSessionId) {
           const welcomeMessage: Message = {
             id: 'welcome',
@@ -110,6 +114,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
     } catch (error) {
       console.error('Error loading chat history:', error);
       setMessages([]);
+      setIsFirstMessage(true);
     } finally {
       setIsLoadingHistory(false);
     }
@@ -119,11 +124,11 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
     try {
       console.log('Saving message:', { content: content.substring(0, 50), sender, sessionId });
       
-      const messageData = {
+      const messageData: any = {
         user_id: user.id,
         content: content,
         sender: sender
-      } as any;
+      };
 
       if (sessionId && sessionId !== 'temp-session' && sessionId !== 'welcome') {
         messageData.session_id = sessionId;
@@ -154,17 +159,22 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
     }
   };
 
-  const getConversationHistory = (): string => {
-    const recentMessages = messages
-      .filter(msg => msg.content && 
-                     !msg.content.toLowerCase().includes("i'm sarvamind") && 
-                     !msg.content.toLowerCase().includes("how can i help") &&
-                     !msg.content.toLowerCase().includes("what can i help"))
-      .slice(-4);
-    
-    return recentMessages
-      .map(msg => `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
-      .join('\n');
+  const buildConversationContext = (): Array<{role: 'user' | 'assistant', content: string}> => {
+    // Filter out welcome messages and build proper conversation context
+    const conversationMessages = messages
+      .filter(msg => 
+        msg.content && 
+        msg.session_id !== 'welcome' &&
+        !msg.content.toLowerCase().includes("what can i help") &&
+        !msg.content.toLowerCase().includes("how can i help") &&
+        msg.content.trim().length > 0
+      )
+      .slice(-6); // Keep last 6 messages for context
+
+    return conversationMessages.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.content
+    }));
   };
 
   const handleSendMessage = async () => {
@@ -194,23 +204,52 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
     setShowMediaUpload(false);
     setIsLoading(true);
     setIsTyping(true);
+    setIsFirstMessage(false);
 
     await saveMessageToDatabase(messageContent || 'Shared media files', 'user', sessionId);
 
     try {
       console.log('Sending message to AI:', messageContent);
-      const conversationHistory = getConversationHistory();
-      let contextualPrompt = messageContent || 'User shared media files';
       
-      if (conversationHistory && conversationHistory.trim().length > 0) {
-        contextualPrompt = `Context: ${conversationHistory}\n\nCurrent: ${messageContent || 'User shared media files'}`;
+      // Build proper conversation context
+      const conversationContext = buildConversationContext();
+      
+      let systemPrompt = "You are SarvaMind, a helpful AI assistant. Provide clear, accurate, and helpful responses.";
+      
+      // Don't add greeting instructions if this isn't the first message
+      if (!isFirstMessage && conversationContext.length > 0) {
+        systemPrompt += " Continue the conversation naturally based on the context provided.";
       }
 
-      const aiResponse = await sarvamAI.sendMessage(contextualPrompt);
+      // Create the prompt with proper context
+      let contextualPrompt = messageContent || 'User shared media files';
+      
+      if (conversationContext.length > 0) {
+        const contextStr = conversationContext
+          .map(msg => `${msg.role}: ${msg.content}`)
+          .join('\n');
+        contextualPrompt = `Previous conversation:\n${contextStr}\n\nCurrent user message: ${messageContent}`;
+      }
+
+      const aiResponse = await sarvamAI.sendMessage(contextualPrompt, systemPrompt);
       console.log('AI Response received:', aiResponse);
 
-      // Clean the AI response but don't over-process it
-      const cleanResponse = aiResponse || "I apologize, but I couldn't generate a response. Please try again.";
+      // Validate and clean the AI response
+      let cleanResponse = aiResponse || "I apologize, but I couldn't generate a response. Please try again.";
+      
+      // Remove any echo of the user's message
+      if (cleanResponse.toLowerCase().includes(messageContent.toLowerCase()) && messageContent.length > 10) {
+        // If response contains user message, try to extract the actual response
+        const parts = cleanResponse.split(messageContent);
+        if (parts.length > 1 && parts[1].trim().length > 0) {
+          cleanResponse = parts[1].trim();
+        }
+      }
+
+      // Ensure response is not just the user's message
+      if (cleanResponse.toLowerCase().trim() === messageContent.toLowerCase().trim()) {
+        cleanResponse = "I understand your message. Could you please provide more details about what you'd like me to help you with?";
+      }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -230,7 +269,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
       
       const fallbackMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I apologize, but I'm having trouble processing your request right now. Please try again.",
+        content: "I'm having trouble processing your request right now. Could you please try rephrasing your question?",
         sender: 'ai',
         timestamp: new Date(),
         session_id: sessionId
@@ -254,6 +293,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
     setMessages([]);
     setSelectedFiles([]);
     setShowMediaUpload(false);
+    setIsFirstMessage(true);
 
     const welcomeMessage: Message = {
       id: 'welcome-new',
@@ -277,6 +317,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
     setSelectedFiles([]);
     setShowMediaUpload(false);
     setSidebarOpen(false);
+    setIsFirstMessage(sessionId === null);
   };
 
   const handleLogout = async () => {

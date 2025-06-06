@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 
 interface SarvamResponse {
@@ -15,14 +14,18 @@ export class ImprovedSarvamAI {
     this.apiKey = apiKey;
   }
 
-  // Improved message sending with echo prevention
+  // Improved message sending with better context handling and echo prevention
   async sendMessage(message: string, systemPrompt?: string): Promise<string> {
     try {
-      // Enhanced system prompt to prevent echoing
+      // Enhanced system prompt to prevent echoing and maintain context
       const enhancedSystemPrompt = systemPrompt || 
-        "You are a helpful AI assistant. Always provide unique, informative responses. " +
-        "Never repeat the user's message back to them. If you don't understand something, ask clarifying questions. " +
-        "Be conversational and helpful.";
+        "You are SarvaMind, a helpful AI assistant. Provide clear, accurate, and helpful responses. " +
+        "Do not repeat the user's input in your response. " +
+        "If you see conversation history, respond naturally to continue the conversation. " +
+        "Be conversational and provide valuable insights.";
+
+      // Clean the input to remove any formatting that might cause echo
+      const cleanInput = message.replace(/^(Previous conversation:|Current user message:|Context:)/gm, '').trim();
 
       const response = await fetch(`${this.baseURL}/translate`, {
         method: 'POST',
@@ -31,7 +34,7 @@ export class ImprovedSarvamAI {
           'API-Subscription-Key': this.apiKey
         },
         body: JSON.stringify({
-          input: `${enhancedSystemPrompt}\n\nUser: ${message}\nAssistant:`,
+          input: `${enhancedSystemPrompt}\n\nUser: ${cleanInput}\nAssistant:`,
           source_language_code: 'hi-IN',
           target_language_code: 'en-IN',
           speaker_gender: 'Male',
@@ -46,31 +49,34 @@ export class ImprovedSarvamAI {
       }
 
       const data: SarvamResponse = await response.json();
-      let aiResponse = data.translated_text || "I understand your message. How can I assist you further?";
+      let aiResponse = data.translated_text || "I understand. How can I assist you further?";
       
       // Enhanced echo detection and prevention
-      if (this.isEchoResponse(message, aiResponse)) {
-        console.log('Echo detected, generating alternative response');
+      if (this.isEchoOrPoorResponse(cleanInput, aiResponse)) {
+        console.log('Echo or poor response detected, generating alternative');
         
         // Try with a more specific prompt
-        const retryResponse = await this.retryWithAlternativePrompt(message);
-        if (retryResponse && !this.isEchoResponse(message, retryResponse)) {
+        const retryResponse = await this.retryWithAlternativePrompt(cleanInput);
+        if (retryResponse && !this.isEchoOrPoorResponse(cleanInput, retryResponse)) {
           return retryResponse;
         }
         
         // If still echoing, return a helpful fallback
-        return this.generateFallbackResponse(message);
+        return this.generateContextualFallback(cleanInput);
       }
+      
+      // Clean up the response to remove any unwanted prefixes
+      aiResponse = this.cleanResponse(aiResponse, cleanInput);
       
       return aiResponse;
     } catch (error) {
       console.error('Error calling Sarvam AI:', error);
-      return "I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment.";
+      return "I apologize, but I'm having trouble connecting right now. Could you please try again?";
     }
   }
 
   // Enhanced echo detection
-  private isEchoResponse(userMessage: string, aiResponse: string): boolean {
+  private isEchoOrPoorResponse(userMessage: string, aiResponse: string): boolean {
     const userLower = userMessage.toLowerCase().trim();
     const aiLower = aiResponse.toLowerCase().trim();
     
@@ -78,19 +84,61 @@ export class ImprovedSarvamAI {
     if (userLower === aiLower) return true;
     
     // Check if AI response starts with user message
-    if (aiLower.startsWith(userLower) && aiLower.length < userLower.length + 20) return true;
+    if (aiLower.startsWith(userLower) && aiLower.length < userLower.length + 30) return true;
+    
+    // Check if response contains too much of the user input
+    if (userMessage.length > 10 && aiLower.includes(userLower)) {
+      const similarity = this.calculateSimilarity(userLower, aiLower);
+      if (similarity > 0.7) return true;
+    }
+    
+    // Check for generic/poor responses
+    const poorResponses = [
+      'i understand your message',
+      'thank you for sharing',
+      'i see what you mean',
+      'that makes sense',
+      'i comprehend'
+    ];
+    
+    if (poorResponses.some(poor => aiLower.includes(poor) && aiLower.length < 50)) {
+      return true;
+    }
     
     // Check similarity ratio
     const similarity = this.calculateSimilarity(userLower, aiLower);
-    if (similarity > 0.8) return true;
+    if (similarity > 0.85) return true;
     
-    // Check if response is just a slight variation
-    const words1 = userLower.split(' ');
-    const words2 = aiLower.split(' ');
-    const commonWords = words1.filter(word => words2.includes(word));
-    const similarityRatio = commonWords.length / Math.max(words1.length, words2.length);
+    return false;
+  }
+
+  private cleanResponse(response: string, userInput: string): string {
+    // Remove common unwanted prefixes
+    const prefixesToRemove = [
+      'user:',
+      'assistant:',
+      'ai:',
+      'sarvamind:',
+      'response:',
+      'answer:'
+    ];
     
-    return similarityRatio > 0.9;
+    let cleaned = response;
+    for (const prefix of prefixesToRemove) {
+      if (cleaned.toLowerCase().startsWith(prefix)) {
+        cleaned = cleaned.substring(prefix.length).trim();
+      }
+    }
+    
+    // If response still contains the user input, try to extract just the AI part
+    if (userInput.length > 10 && cleaned.toLowerCase().includes(userInput.toLowerCase())) {
+      const parts = cleaned.split(userInput);
+      if (parts.length > 1 && parts[1].trim().length > 0) {
+        cleaned = parts[1].trim();
+      }
+    }
+    
+    return cleaned;
   }
 
   private calculateSimilarity(str1: string, str2: string): number {
@@ -134,9 +182,9 @@ export class ImprovedSarvamAI {
   private async retryWithAlternativePrompt(message: string): Promise<string | null> {
     try {
       const alternativePrompt = 
-        "You are an intelligent AI assistant. The user has sent you a message. " +
-        "Please provide a thoughtful, relevant response that adds value to the conversation. " +
-        "Do not echo or repeat their message. Engage meaningfully with their query.";
+        "You are SarvaMind, an intelligent AI assistant. The user has asked you something. " +
+        "Provide a helpful, informative response that directly addresses their query. " +
+        "Be specific and add value to the conversation. Do not repeat their question.";
 
       const response = await fetch(`${this.baseURL}/translate`, {
         method: 'POST',
@@ -145,7 +193,7 @@ export class ImprovedSarvamAI {
           'API-Subscription-Key': this.apiKey
         },
         body: JSON.stringify({
-          input: `${alternativePrompt}\n\nUser message: "${message}"\n\nYour response:`,
+          input: `${alternativePrompt}\n\nQuery: ${message}\n\nResponse:`,
           source_language_code: 'hi-IN',
           target_language_code: 'en-IN',
           speaker_gender: 'Female',
@@ -165,13 +213,33 @@ export class ImprovedSarvamAI {
     return null;
   }
 
-  private generateFallbackResponse(message: string): string {
+  private generateContextualFallback(message: string): string {
+    // Analyze the message to provide more contextual fallbacks
+    const messageLower = message.toLowerCase();
+    
+    if (messageLower.includes('code') || messageLower.includes('program')) {
+      return "I can help you with coding questions. What specific programming language or problem are you working on?";
+    }
+    
+    if (messageLower.includes('help') || messageLower.includes('assist')) {
+      return "I'm here to help! Could you provide more details about what you need assistance with?";
+    }
+    
+    if (messageLower.includes('explain') || messageLower.includes('what is')) {
+      return "I'd be happy to explain that for you. Could you be more specific about which aspect you'd like me to focus on?";
+    }
+    
+    if (messageLower.includes('how')) {
+      return "That's a great question! To give you the most helpful answer, could you provide a bit more context about your situation?";
+    }
+    
+    // Generic fallbacks
     const fallbacks = [
-      "That's an interesting point. Could you tell me more about what you're looking for?",
-      "I'd be happy to help you with that. What specific aspect would you like me to focus on?",
-      "Thank you for sharing that. How can I assist you further with this topic?",
-      "I understand. What would you like to know more about regarding this?",
-      "That's a good question. Let me help you explore that further. What's your main concern?"
+      "That's an interesting topic. What specific aspect would you like to explore further?",
+      "I'd be happy to help you with that. Could you provide more details about your question?",
+      "Thank you for your message. What would you like to know more about?",
+      "I understand you're looking for information. What specific details can I help you with?",
+      "That's a good point. How can I assist you in exploring this topic further?"
     ];
     
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
