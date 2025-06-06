@@ -177,6 +177,31 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
     }));
   };
 
+  const formatMessageContent = (content: string) => {
+    // Convert lists
+    let formatted = content.replace(/(?:^|\n)([•\-\*]) (.+)/gm, '<li>$2</li>');
+    if (formatted.includes('<li>')) {
+      formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ul class="list-disc list-inside space-y-1 ml-4">$1</ul>');
+    }
+
+    // Convert numbered lists
+    formatted = formatted.replace(/(?:^|\n)(\d+)\. (.+)/gm, '<li>$2</li>');
+    if (formatted.includes('<li>') && !formatted.includes('<ul>')) {
+      formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ol class="list-decimal list-inside space-y-1 ml-4">$1</ol>');
+    }
+
+    // Convert code blocks
+    formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-black/30 rounded-lg p-3 my-2 overflow-x-auto"><code class="text-green-400 text-sm">$2</code></pre>');
+    
+    // Convert inline code
+    formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-black/20 px-1 py-0.5 rounded text-sm">$1</code>');
+
+    // Convert links
+    formatted = formatted.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary underline hover:text-primary/80 transition-colors">$1</a>');
+
+    return formatted;
+  };
+
   const handleSendMessage = async () => {
     if ((!inputValue.trim() && selectedFiles.length === 0) || isLoading) return;
 
@@ -366,36 +391,36 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
 
   if (isLoadingHistory) {
     return (
-      <div className="flex h-screen bg-black items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden animate-pulse glow">
+      <div className="flex h-screen bg-gradient-to-br from-black via-purple-900/20 to-black items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full overflow-hidden animate-pulse glow-subtle transform transition-all duration-1000 hover:scale-110">
             <img 
               src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
               alt="SarvaMind" 
               className="w-full h-full object-cover" 
             />
           </div>
-          <p className="text-muted-foreground">Loading your chat history...</p>
+          <p className="text-muted-foreground animate-pulse">Loading your chat history...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-black relative overflow-hidden">
-      {/* Hamburger Menu Button - Fixed positioning */}
+    <div className="flex h-screen bg-gradient-to-br from-black via-purple-900/10 to-black relative overflow-hidden">
+      {/* Hamburger Menu Button - Enhanced with animation */}
       <Button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         variant="ghost"
         size="sm"
-        className="fixed top-4 left-4 z-50 text-muted-foreground hover:text-white glass-card glow-subtle md:hidden"
+        className="fixed top-4 left-4 z-50 text-muted-foreground hover:text-white glass-card glow-subtle md:hidden transform transition-all duration-300 hover:scale-110"
         title="Toggle sidebar"
       >
         <Menu className="w-5 h-5" />
       </Button>
 
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block">
+      {/* Desktop Sidebar - Enhanced slide animation */}
+      <div className="hidden md:block transform transition-all duration-500 ease-out">
         <ChatSidebar 
           user={user}
           currentSessionId={currentSessionId}
@@ -404,16 +429,16 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
         />
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Overlay with backdrop blur */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden" 
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 md:hidden animate-fade-in" 
           onClick={() => setSidebarOpen(false)} 
         />
       )}
 
-      {/* Mobile Sliding Sidebar */}
-      <div className={`fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
+      {/* Mobile Sliding Sidebar - Enhanced animation */}
+      <div className={`fixed top-0 left-0 h-full z-50 transform transition-all duration-500 ease-out md:hidden ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <ChatSidebar 
@@ -424,13 +449,13 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
         />
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col relative bg-black min-w-0">
-        {/* Chat Header */}
-        <div className="glass-card rounded-none border-x-0 border-t-0 p-4 sticky top-0 z-10">
+      {/* Main Chat Area - Enhanced glassmorphism */}
+      <div className="flex-1 flex flex-col relative bg-transparent min-w-0 animate-fade-in">
+        {/* Enhanced Chat Header with glassmorphism */}
+        <div className="backdrop-blur-xl bg-black/20 border-b border-white/10 p-4 sticky top-0 z-10 shadow-lg">
           <div className="flex items-center justify-between md:ml-0 ml-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden glow-subtle">
+            <div className="flex items-center gap-3 animate-slide-in-left">
+              <div className="w-12 h-12 rounded-full overflow-hidden glow-subtle transform transition-all duration-300 hover:scale-110">
                 <img 
                   src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
                   alt="SarvaMind" 
@@ -438,15 +463,16 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
                 />
               </div>
               <div>
-                <h2 className="font-semibold text-white">SarvaMind</h2>
+                <h2 className="font-semibold text-white text-lg">SarvaMind</h2>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 animate-slide-in-right">
               <Button
                 onClick={handleLogout}
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-white"
+                className="text-muted-foreground hover:text-white transform transition-all duration-300 hover:scale-110"
               >
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -454,13 +480,17 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
           </div>
         </div>
 
-        {/* Messages Area */}
-        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-40">
+        {/* Enhanced Messages Area with glassmorphism cards */}
+        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-48">
           <div className="space-y-6 max-w-4xl mx-auto">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {messages.map((message, index) => (
+              <div 
+                key={message.id} 
+                className={`flex gap-4 animate-slide-up ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
                 {message.sender === 'ai' && (
-                  <div className="w-8 h-8 rounded-full overflow-hidden glow-subtle flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full overflow-hidden glow-subtle flex-shrink-0 transform transition-all duration-300 hover:scale-110">
                     <img 
                       src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
                       alt="SarvaMind" 
@@ -469,26 +499,30 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
                   </div>
                 )}
                 
-                <div className={`max-w-[85%] sm:max-w-[70%] ${message.sender === 'user' ? 'order-first' : ''}`}>
-                  <div className={`glass-card rounded-2xl p-4 mb-6 ${
+                <div className={`max-w-[85%] sm:max-w-[75%] ${message.sender === 'user' ? 'order-first' : ''}`}>
+                  {/* Enhanced glassmorphism message bubble */}
+                  <div className={`backdrop-blur-xl rounded-3xl p-6 mb-4 transform transition-all duration-300 hover:scale-[1.02] ${
                     message.sender === 'user' 
-                      ? 'bg-gradient-to-r from-primary/20 to-accent/20 glow-subtle border-primary/30' 
-                      : 'border-primary/20'
+                      ? 'bg-gradient-to-br from-primary/30 to-accent/30 border border-primary/40 shadow-2xl glow-subtle ml-auto' 
+                      : 'bg-black/30 border border-white/20 shadow-2xl'
                   }`}>
-                    <p className="text-white leading-relaxed break-words whitespace-pre-wrap">
-                      {message.content || 'No content'}
-                    </p>
+                    <div 
+                      className="text-white leading-relaxed break-words whitespace-pre-wrap prose prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ 
+                        __html: formatMessageContent(message.content || 'No content') 
+                      }}
+                    />
                     
-                    {/* Media Files */}
+                    {/* Enhanced Media Files display */}
                     {message.mediaFiles && message.mediaFiles.length > 0 && (
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-4 space-y-3">
                         {message.mediaFiles.map((file) => (
-                          <div key={file.id} className="glass rounded p-2">
+                          <div key={file.id} className="backdrop-blur-md bg-white/10 rounded-2xl p-3 border border-white/20">
                             {file.type === 'image' && file.preview && (
-                              <img src={file.preview} alt="Shared image" className="max-w-full h-auto rounded" />
+                              <img src={file.preview} alt="Shared image" className="max-w-full h-auto rounded-xl shadow-lg" />
                             )}
                             {file.type === 'video' && file.url && (
-                              <video src={file.url} controls className="max-w-full h-auto rounded" />
+                              <video src={file.url} controls className="max-w-full h-auto rounded-xl shadow-lg" />
                             )}
                             {file.type === 'audio' && file.url && (
                               <audio src={file.url} controls className="w-full" />
@@ -502,16 +536,18 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
                     )}
                   </div>
                   
-                  {/* Message metadata and actions */}
-                  <div className="flex items-center justify-between px-2 mb-6">
+                  {/* Enhanced message metadata */}
+                  <div className="flex items-center justify-between px-4 mb-6">
                     <p className="text-xs text-muted-foreground">
                       {formatTime(message.timestamp)}
                     </p>
                     
                     {message.sender === 'ai' && message.content && (
-                      <div className="flex items-center gap-2 z-20 relative">
-                        <ImprovedTextToSpeech text={message.content} />
-                        <div className="relative">
+                      <div className="flex items-center gap-3 z-20 relative">
+                        <div className="transform transition-all duration-300 hover:scale-110">
+                          <ImprovedTextToSpeech text={message.content} />
+                        </div>
+                        <div className="relative transform transition-all duration-300 hover:scale-110">
                           <ImprovedTranslationFeature 
                             text={message.content} 
                             onTranslate={handleTranslate} 
@@ -523,28 +559,31 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
                 </div>
 
                 {message.sender === 'user' && (
-                  <div className="w-8 h-8 rounded-full glass flex items-center justify-center glow-subtle flex-shrink-0">
-                    <User className="w-4 h-4 text-accent" />
+                  <div className="w-10 h-10 rounded-full backdrop-blur-md bg-accent/30 border border-accent/40 flex items-center justify-center glow-subtle flex-shrink-0 transform transition-all duration-300 hover:scale-110">
+                    <User className="w-5 h-5 text-accent" />
                   </div>
                 )}
               </div>
             ))}
 
-            {/* Thinking Indicator */}
+            {/* Enhanced Typing Indicator with bouncing animation */}
             {isTyping && (
-              <div className="flex gap-3 justify-start max-w-4xl mx-auto">
-                <div className="w-8 h-8 rounded-full overflow-hidden glow-subtle flex-shrink-0">
+              <div className="flex gap-4 justify-start max-w-4xl mx-auto animate-fade-in">
+                <div className="w-10 h-10 rounded-full overflow-hidden glow-subtle flex-shrink-0">
                   <img 
                     src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
                     alt="SarvaMind" 
                     className="w-full h-full object-cover" 
                   />
                 </div>
-                <div className="glass-card rounded-2xl p-4 max-w-[85%] sm:max-w-[70%] border-primary/20">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-primary rounded-full typing-dot"></div>
-                    <div className="w-2 h-2 bg-primary rounded-full typing-dot"></div>
-                    <div className="w-2 h-2 bg-primary rounded-full typing-dot"></div>
+                <div className="backdrop-blur-xl bg-black/30 border border-white/20 rounded-3xl p-6 max-w-[85%] sm:max-w-[75%] shadow-2xl">
+                  <div className="flex gap-2 items-center">
+                    <span className="text-muted-foreground text-sm mr-2">SarvaMind is thinking</span>
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -552,12 +591,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
           </div>
         </ScrollArea>
 
-        {/* Enhanced Floating Input Area */}
-        <div className="fixed bottom-4 left-4 right-4 md:left-1/2 md:transform md:-translate-x-1/2 md:w-full md:max-w-4xl md:px-4 z-30">
+        {/* Enhanced Floating Input Area with improved glassmorphism */}
+        <div className="fixed bottom-4 left-4 right-4 md:left-1/2 md:transform md:-translate-x-1/2 md:w-full md:max-w-4xl md:px-4 z-30 animate-slide-in-bottom">
           <div className="space-y-4">
-            {/* Media Upload Area */}
+            {/* Enhanced Media Upload Area */}
             {showMediaUpload && (
-              <div className="backdrop-blur-xl bg-black/30 rounded-2xl p-4 border border-primary/30 shadow-2xl glow-subtle">
+              <div className="backdrop-blur-xl bg-black/40 border border-white/20 rounded-3xl p-6 shadow-2xl glow-subtle animate-scale-in">
                 <MediaUpload
                   onFilesSelected={setSelectedFiles}
                   selectedFiles={selectedFiles}
@@ -566,10 +605,10 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
               </div>
             )}
 
-            {/* Enhanced Input Container */}
-            <div className="backdrop-blur-xl p-4 border border-primary/30 shadow-2xl glow-subtle rounded-full bg-transparent">
-              <div className="space-y-3 rounded-full">
-                {/* Text Input */}
+            {/* Enhanced Input Container with focus glow */}
+            <div className="backdrop-blur-xl bg-black/40 border border-white/20 shadow-2xl rounded-3xl p-4 transition-all duration-300 focus-within:shadow-primary/20 focus-within:border-primary/50 focus-within:glow">
+              <div className="space-y-4">
+                {/* Enhanced Text Input */}
                 <Textarea
                   ref={textareaRef}
                   value={inputValue}
@@ -577,40 +616,42 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
                   onKeyDown={handleKeyPress}
                   placeholder="Ask anything... (Shift+Enter for new line)"
                   disabled={isLoading}
-                  className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[2.5rem] max-h-32 px-[28px] my-0 py-0 bg-transparent"
+                  className="border-0 text-white placeholder:text-muted-foreground focus-visible:ring-0 resize-none min-h-[3rem] max-h-32 px-6 py-3 bg-transparent text-lg"
                 />
                 
-                {/* Controls */}
-                <div className="flex items-center justify-between px-[28px]">
-                  <div className="flex items-center gap-2">
+                {/* Enhanced Controls */}
+                <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center gap-3">
                     <Button
                       onClick={() => setShowMediaUpload(!showMediaUpload)}
                       variant="ghost"
                       size="sm"
-                      className="text-muted-foreground hover:text-white"
+                      className="text-muted-foreground hover:text-white transform transition-all duration-300 hover:scale-110"
                       title="Upload media"
                     >
-                      <Upload className="w-4 h-4" />
+                      <Upload className="w-5 h-5" />
                     </Button>
 
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-muted-foreground hover:text-white"
+                      className="text-muted-foreground hover:text-white transform transition-all duration-300 hover:scale-110"
                       title="Generate image"
                     >
-                      <ImageIcon className="w-4 h-4" />
+                      <ImageIcon className="w-5 h-5" />
                     </Button>
                     
-                    <AudioRecorder onAudioRecorded={handleAudioRecorded} />
+                    <div className="transform transition-all duration-300 hover:scale-110">
+                      <AudioRecorder onAudioRecorded={handleAudioRecorded} />
+                    </div>
                   </div>
                   
                   <Button
                     onClick={handleSendMessage}
                     disabled={(!inputValue.trim() && selectedFiles.length === 0) || isLoading}
-                    className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-105 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex-shrink-0"
+                    className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white transition-all duration-300 hover:scale-110 glow disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex-shrink-0 transform"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-5 h-5" />
                   </Button>
                 </div>
               </div>

@@ -71,6 +71,78 @@ body {
   box-shadow: 0 0 10px rgba(66, 153, 225, 0.2), 0 0 20px rgba(66, 153, 225, 0.1);
 }
 
+/* Focus glow effect */
+.focus-within\:glow:focus-within {
+  box-shadow: 0 0 15px rgba(127, 90, 240, 0.4), 0 0 30px rgba(127, 90, 240, 0.2);
+}
+
+/* Enhanced Animation Keyframes */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Typing Animation */
 .typing-dot {
   animation: typing 1.4s infinite ease-in-out;
@@ -91,12 +163,38 @@ body {
   }
 }
 
-/* Smooth Transitions */
-* {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Animation Classes */
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
 }
 
-/* Mobile Optimizations */
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.6s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.6s ease-out forwards;
+}
+
+.animate-slide-in-bottom {
+  animation: slide-in-bottom 0.8s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+/* Smooth Transitions with GPU acceleration */
+* {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translate3d(0, 0, 0);
+}
+
+/* Enhanced Mobile Optimizations */
 @media (max-width: 768px) {
   .glass-card {
     backdrop-filter: blur(12px);
@@ -107,24 +205,24 @@ body {
   }
 }
 
-/* Prose styling for AI responses */
+/* Prose styling for AI responses with enhanced formatting */
 .prose {
   max-width: none;
 }
 
 .prose p {
   margin-bottom: 1rem;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .prose ol, .prose ul {
-  margin: 1rem 0;
+  margin: 1.2rem 0;
   padding-left: 1.5rem;
 }
 
 .prose li {
-  margin-bottom: 0.5rem;
-  line-height: 1.5;
+  margin-bottom: 0.6rem;
+  line-height: 1.6;
 }
 
 .prose ol {
@@ -139,25 +237,46 @@ body {
   color: hsl(var(--primary));
 }
 
-/* Scrollbar styling */
+.prose pre {
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+}
+
+.prose code {
+  border-radius: 0.375rem;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.prose a {
+  transition: all 0.2s ease;
+}
+
+.prose a:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+/* Enhanced Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  border-radius: 4px;
+  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Floating input area responsive design */
+/* Enhanced Floating input area responsive design */
 @media (max-width: 640px) {
   .fixed.bottom-4.left-4.right-4 {
     left: 1rem;
@@ -169,11 +288,25 @@ body {
 /* Enhanced mobile responsiveness */
 @media (max-width: 480px) {
   .glass-card {
-    border-radius: 1rem;
-    padding: 0.75rem;
+    border-radius: 1.5rem;
+    padding: 1rem;
   }
   
   .backdrop-blur-xl {
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
   }
+}
+
+/* Button hover effects */
+.hover\:scale-110:hover {
+  transform: scale(1.1) translate3d(0, 0, 0);
+}
+
+.hover\:scale-\[1\.02\]:hover {
+  transform: scale(1.02) translate3d(0, 0, 0);
+}
+
+/* Enhanced focus states */
+.focus\:glow:focus {
+  box-shadow: 0 0 15px rgba(127, 90, 240, 0.6), 0 0 30px rgba(127, 90, 240, 0.3);
 }
