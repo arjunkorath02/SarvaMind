@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,8 +51,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         // Group messages by session_id
         const sessionMap = new Map<string, ChatSession>();
         
-        if (messagesData) {
-          messagesData.forEach((msg) => {
+        if (messagesData && Array.isArray(messagesData)) {
+          messagesData.forEach((msg: any) => {
             const sessionId = msg.session_id;
             if (sessionId && !sessionMap.has(sessionId)) {
               sessionMap.set(sessionId, {
