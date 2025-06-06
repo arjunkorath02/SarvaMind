@@ -34,6 +34,24 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   useEffect(() => {
     loadChatSessions();
+    
+    // Set up real-time subscription for new messages
+    const subscription = supabase
+      .channel('chat-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        console.log('Message change detected, reloading sessions');
+        loadChatSessions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [user.id]);
 
   const loadChatSessions = async () => {
@@ -41,9 +59,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       console.log('Loading chat sessions for user:', user.id);
       const { data: messagesData, error } = await supabase
         .from('messages')
-        .select('session_id, content, created_at')
+        .select('session_id, content, created_at, sender')
         .eq('user_id', user.id)
         .not('session_id', 'is', null)
+        .neq('session_id', 'welcome')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -51,25 +70,39 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         setSessions([]);
       } else {
         console.log('Raw messages data:', messagesData);
-        // Group messages by session_id
+        
         const sessionMap = new Map<string, ChatSession>();
         
         if (messagesData && Array.isArray(messagesData)) {
           messagesData.forEach((msg) => {
             const sessionId = msg.session_id;
-            if (sessionId && !sessionMap.has(sessionId)) {
-              sessionMap.set(sessionId, {
-                id: sessionId,
-                title: generateChatTitle(msg.content || ''),
-                created_at: msg.created_at,
-                updated_at: msg.created_at,
-                message_count: 1
-              });
-            } else if (sessionId && sessionMap.has(sessionId)) {
-              const session = sessionMap.get(sessionId)!;
-              session.message_count += 1;
-              if (new Date(msg.created_at) > new Date(session.updated_at)) {
-                session.updated_at = msg.created_at;
+            if (sessionId && sessionId !== 'welcome') {
+              if (!sessionMap.has(sessionId)) {
+                // Create new session entry with first user message as title
+                const title = msg.sender === 'user' 
+                  ? generateChatTitle(msg.content || '') 
+                  : 'New Chat';
+                
+                sessionMap.set(sessionId, {
+                  id: sessionId,
+                  title: title,
+                  created_at: msg.created_at,
+                  updated_at: msg.created_at,
+                  message_count: 1
+                });
+              } else {
+                const session = sessionMap.get(sessionId)!;
+                session.message_count += 1;
+                
+                // Update title with first user message if current title is generic
+                if (session.title === 'New Chat' && msg.sender === 'user' && msg.content) {
+                  session.title = generateChatTitle(msg.content);
+                }
+                
+                // Update timestamp if this message is newer
+                if (new Date(msg.created_at) > new Date(session.updated_at)) {
+                  session.updated_at = msg.created_at;
+                }
               }
             }
           });
@@ -108,7 +141,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const { error } = await supabase
         .from('messages')
         .delete()
-        .eq('session_id', sessionId);
+        .eq('session_id', sessionId)
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Error deleting session:', error);
@@ -190,7 +224,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             onClick={() => setIsCollapsed(true)}
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-white flex-shrink-0"
+            className="text-muted-foreground hover:text-white flex-shrink-0 hidden md:flex"
             title="Collapse sidebar"
           >
             <ChevronLeft className="w-4 h-4" />
