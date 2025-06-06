@@ -34,42 +34,6 @@ interface EnhancedChatInterfaceProps {
   user: SupabaseUser;
 }
 
-const formatAIResponse = (content: string): string => {
-  // Remove repeated greetings and intro text
-  const greetingPatterns = [
-    /^Hello! I'm.*?(?=\n|$)/gim,
-    /^Hi! I'm.*?(?=\n|$)/gim,
-    /^I'm SarvaMind.*?(?=\n|$)/gim,
-    /^I'm your.*?assistant.*?(?=\n|$)/gim
-  ];
-
-  let cleanedContent = content;
-  greetingPatterns.forEach(pattern => {
-    cleanedContent = cleanedContent.replace(pattern, '').trim();
-  });
-
-  // Convert numbered lists
-  cleanedContent = cleanedContent.replace(/^(\d+)\.\s+(.+$)/gm, '<li>$2</li>');
-
-  // Convert bullet points
-  cleanedContent = cleanedContent.replace(/^[-•]\s+(.+$)/gm, '<li>$1</li>');
-
-  // Wrap consecutive list items in <ol> or <ul>
-  cleanedContent = cleanedContent.replace(/(<li>.*<\/li>)/gs, match => {
-    const hasNumbers = /^\d+\./.test(match);
-    const tag = hasNumbers ? 'ol' : 'ul';
-    return `<${tag}>${match}</${tag}>`;
-  });
-
-  // Convert line breaks to paragraphs for better formatting
-  cleanedContent = cleanedContent.replace(/\n\n/g, '</p><p>');
-  cleanedContent = `<p>${cleanedContent}</p>`;
-
-  // Clean up empty paragraphs
-  cleanedContent = cleanedContent.replace(/<p><\/p>/g, '');
-  return cleanedContent;
-};
-
 const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -102,6 +66,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
 
   const loadChatHistory = async () => {
     try {
+      console.log('Loading chat history for session:', currentSessionId);
       let query = supabase
         .from('messages')
         .select('*')
@@ -118,10 +83,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
 
       if (error) {
         console.error('Error loading chat history:', error);
+        setMessages([]);
       } else {
+        console.log('Loaded messages:', data);
         const formattedMessages: Message[] = (data || []).map((msg: any) => ({
           id: msg.id,
-          content: msg.content,
+          content: msg.content || '',
           sender: msg.sender as 'user' | 'ai',
           timestamp: new Date(msg.created_at),
           session_id: msg.session_id || 'legacy'
@@ -142,6 +109,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
       }
     } catch (error) {
       console.error('Error loading chat history:', error);
+      setMessages([]);
     } finally {
       setIsLoadingHistory(false);
     }
@@ -149,11 +117,13 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
 
   const saveMessageToDatabase = async (content: string, sender: 'user' | 'ai', sessionId: string) => {
     try {
-      const messageData: any = {
+      console.log('Saving message:', { content: content.substring(0, 50), sender, sessionId });
+      
+      const messageData = {
         user_id: user.id,
-        content,
-        sender
-      };
+        content: content,
+        sender: sender
+      } as any;
 
       if (sessionId && sessionId !== 'temp-session' && sessionId !== 'welcome') {
         messageData.session_id = sessionId;
@@ -165,6 +135,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
 
       if (error) {
         console.error('Error saving message:', error);
+      } else {
+        console.log('Message saved successfully');
       }
     } catch (error) {
       console.error('Error saving message:', error);
@@ -174,6 +146,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
   const createNewSession = async (firstMessage: string): Promise<string> => {
     try {
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      console.log('Created new session:', sessionId);
       return sessionId;
     } catch (error) {
       console.error('Error creating session:', error);
@@ -183,8 +156,10 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
 
   const getConversationHistory = (): string => {
     const recentMessages = messages
-      .filter(msg => !msg.content.toLowerCase().includes("i'm sarvamind") && 
-                     !msg.content.toLowerCase().includes("how can i help"))
+      .filter(msg => msg.content && 
+                     !msg.content.toLowerCase().includes("i'm sarvamind") && 
+                     !msg.content.toLowerCase().includes("how can i help") &&
+                     !msg.content.toLowerCase().includes("what can i help"))
       .slice(-4);
     
     return recentMessages
@@ -234,11 +209,12 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
       const aiResponse = await sarvamAI.sendMessage(contextualPrompt);
       console.log('AI Response received:', aiResponse);
 
-      const formattedResponse = formatAIResponse(aiResponse);
+      // Clean the AI response but don't over-process it
+      const cleanResponse = aiResponse || "I apologize, but I couldn't generate a response. Please try again.";
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: formattedResponse,
+        content: cleanResponse,
         sender: 'ai',
         timestamp: new Date(),
         session_id: sessionId
@@ -248,7 +224,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
       setMessages(prev => [...prev, aiMessage]);
       setIsLoading(false);
 
-      await saveMessageToDatabase(formattedResponse, 'ai', sessionId);
+      await saveMessageToDatabase(cleanResponse, 'ai', sessionId);
     } catch (error) {
       console.error('Error getting AI response:', error);
       
@@ -295,6 +271,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
   };
 
   const handleSessionSelect = (sessionId: string | null) => {
+    console.log('Selecting session:', sessionId);
     setCurrentSessionId(sessionId);
     setMessages([]);
     setSelectedFiles([]);
@@ -436,7 +413,7 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
           </div>
         </div>
 
-        {/* Messages Area - Increased bottom padding for translate menu visibility */}
+        {/* Messages Area */}
         <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 pb-40">
           <div className="space-y-6 max-w-4xl mx-auto">
             {messages.map((message) => (
@@ -457,14 +434,9 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
                       ? 'bg-gradient-to-r from-primary/20 to-accent/20 glow-subtle border-primary/30' 
                       : 'border-primary/20'
                   }`}>
-                    {message.sender === 'ai' && message.content.includes('<') ? (
-                      <div 
-                        className="text-white leading-relaxed break-words prose prose-invert max-w-none"
-                        dangerouslySetInnerHTML={{ __html: message.content }}
-                      />
-                    ) : (
-                      <p className="text-white leading-relaxed break-words">{message.content}</p>
-                    )}
+                    <p className="text-white leading-relaxed break-words whitespace-pre-wrap">
+                      {message.content || 'No content'}
+                    </p>
                     
                     {/* Media Files */}
                     {message.mediaFiles && message.mediaFiles.length > 0 && (
@@ -489,13 +461,13 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({ user }) =
                     )}
                   </div>
                   
-                  {/* Message metadata and actions with proper spacing */}
+                  {/* Message metadata and actions */}
                   <div className="flex items-center justify-between px-2 mb-6">
                     <p className="text-xs text-muted-foreground">
                       {formatTime(message.timestamp)}
                     </p>
                     
-                    {message.sender === 'ai' && (
+                    {message.sender === 'ai' && message.content && (
                       <div className="flex items-center gap-2 z-20 relative">
                         <ImprovedTextToSpeech text={message.content} />
                         <div className="relative">

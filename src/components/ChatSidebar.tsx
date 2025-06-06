@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const loadChatSessions = async () => {
     try {
+      console.log('Loading chat sessions for user:', user.id);
       const { data: messagesData, error } = await supabase
         .from('messages')
         .select('session_id, content, created_at')
@@ -48,11 +50,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         console.error('Error loading chat sessions:', error);
         setSessions([]);
       } else {
+        console.log('Raw messages data:', messagesData);
         // Group messages by session_id
         const sessionMap = new Map<string, ChatSession>();
         
         if (messagesData && Array.isArray(messagesData)) {
-          messagesData.forEach((msg: any) => {
+          messagesData.forEach((msg) => {
             const sessionId = msg.session_id;
             if (sessionId && !sessionMap.has(sessionId)) {
               sessionMap.set(sessionId, {
@@ -76,6 +79,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         );
 
+        console.log('Formatted sessions:', formattedSessions);
         setSessions(formattedSessions);
       }
     } catch (error) {
@@ -87,6 +91,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   const generateChatTitle = (firstMessage: string): string => {
+    if (!firstMessage || firstMessage.trim() === '') {
+      return 'New Chat';
+    }
     const words = firstMessage.trim().split(' ').slice(0, 4);
     let title = words.join(' ');
     if (firstMessage.length > 30) {
@@ -97,6 +104,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const deleteSession = async (sessionId: string) => {
     try {
+      console.log('Deleting session:', sessionId);
       const { error } = await supabase
         .from('messages')
         .delete()
