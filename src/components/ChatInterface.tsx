@@ -12,7 +12,7 @@ import AudioRecorder from './AudioRecorder';
 import ImprovedTranslationFeature from './ImprovedTranslationFeature';
 import ImprovedTextToSpeech from './ImprovedTextToSpeech';
 import Sidebar from './Sidebar';
-import { sarvamAI } from './ImprovedSarvamAI';
+import { geminiAI } from './GeminiAI';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface Message {
@@ -128,12 +128,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
     return sessionId;
   };
 
-  const generateImageWithPlaceholder = async (prompt: string): Promise<string> => {
-    // Generate a random image with the prompt as alt text
-    const imageId = Math.floor(Math.random() * 1000) + 1;
-    return `https://picsum.photos/800/600?random=${imageId}`;
-  };
-
   const processMediaFiles = async (files: MediaFile[]): Promise<string> => {
     let description = '';
     
@@ -191,7 +185,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
       if (isImageGeneration) {
         setIsGeneratingImage(true);
         console.log('Generating image for prompt:', originalInput);
-        const imageUrl = await generateImageWithPlaceholder(originalInput);
+        const imageUrl = await geminiAI.generateImage(originalInput);
         
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -215,7 +209,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
           systemPrompt += " The user has shared files. Acknowledge them and provide relevant assistance based on the file types mentioned.";
         }
 
-        const aiResponse = await sarvamAI.sendMessage(messageContent, systemPrompt);
+        const aiResponse = await geminiAI.sendMessage(messageContent, systemPrompt);
         console.log('AI Response received:', aiResponse);
 
         if (!aiResponse || aiResponse.trim().length === 0) {
@@ -416,7 +410,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
 
         {/* Messages */}
         <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-          <div className="space-y-6 max-w-4xl mx-auto pb-32">
+          <div className="space-y-6 max-w-4xl mx-auto pb-48">
             {messages.map((message, index) => (
               <div 
                 key={message.id} 
@@ -530,9 +524,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
           </div>
         </ScrollArea>
 
-        {/* Input Area */}
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-4 z-30">
-          <div className="space-y-4">
+        {/* Input Area - Fixed with better spacing */}
+        <div className="fixed bottom-4 left-4 right-4 md:left-80 z-30">
+          <div className="max-w-4xl mx-auto space-y-4">
             {showMediaUpload && (
               <div className="backdrop-blur-xl bg-black/40 border border-white/20 rounded-3xl p-6 shadow-2xl glow-subtle">
                 <MediaUpload 
