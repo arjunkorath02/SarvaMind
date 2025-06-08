@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,12 +31,22 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
     loadChatSessions();
     
-    const subscription = supabase
-      .channel('chat-updates')
+    // Clean up any existing subscription before creating a new one
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+    
+    // Create a unique channel name to avoid conflicts
+    const channelName = `chat-updates-${user.id}-${Date.now()}`;
+    
+    subscriptionRef.current = supabase
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -49,7 +59,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       .subscribe();
 
     return () => {
-      supabase.removeChannel(subscription);
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
     };
   }, [user.id]);
 
