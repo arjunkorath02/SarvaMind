@@ -32,18 +32,22 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const subscriptionRef = useRef<any>(null);
+  const mounted = useRef(true);
 
   useEffect(() => {
+    mounted.current = true;
     loadChatSessions();
     
     // Clean up any existing subscription before creating a new one
     if (subscriptionRef.current) {
+      console.log('Cleaning up existing subscription');
       supabase.removeChannel(subscriptionRef.current);
       subscriptionRef.current = null;
     }
     
     // Create a unique channel name to avoid conflicts
-    const channelName = `chat-updates-${user.id}-${Date.now()}`;
+    const channelName = `chat-history-updates-${user.id}-${Date.now()}`;
+    console.log('Setting up new subscription:', channelName);
     
     subscriptionRef.current = supabase
       .channel(channelName)
@@ -53,12 +57,23 @@ const Sidebar: React.FC<SidebarProps> = ({
         table: 'messages',
         filter: `user_id=eq.${user.id}`
       }, (payload) => {
-        console.log('Message change detected, reloading sessions', payload);
-        loadChatSessions();
+        console.log('Message change detected in sidebar, reloading sessions', payload);
+        if (mounted.current) {
+          // Add a small delay to ensure the message is fully written to the database
+          setTimeout(() => {
+            if (mounted.current) {
+              loadChatSessions();
+            }
+          }, 500);
+        }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Sidebar subscription status:', status);
+      });
 
     return () => {
+      mounted.current = false;
+      console.log('Sidebar cleanup - removing subscription');
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current);
         subscriptionRef.current = null;
@@ -67,6 +82,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [user.id]);
 
   const loadChatSessions = async () => {
+    if (!mounted.current) return;
+    
     try {
       console.log('Loading chat sessions for user:', user.id);
       const { data: messagesData, error } = await supabase
@@ -79,15 +96,19 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       if (error) {
         console.error('Error loading chat sessions:', error);
-        setSessions([]);
+        if (mounted.current) {
+          setSessions([]);
+        }
         return;
       }
 
-      console.log('Raw messages data:', messagesData);
+      console.log('Raw messages data for sidebar:', messagesData);
       
       if (!messagesData || messagesData.length === 0) {
-        console.log('No messages found');
-        setSessions([]);
+        console.log('No messages found for sidebar');
+        if (mounted.current) {
+          setSessions([]);
+        }
         return;
       }
 
@@ -127,13 +148,19 @@ const Sidebar: React.FC<SidebarProps> = ({
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
 
-      console.log('Formatted sessions:', formattedSessions);
-      setSessions(formattedSessions);
+      console.log('Formatted sessions for sidebar:', formattedSessions);
+      if (mounted.current) {
+        setSessions(formattedSessions);
+      }
     } catch (error) {
       console.error('Error loading chat sessions:', error);
-      setSessions([]);
+      if (mounted.current) {
+        setSessions([]);
+      }
     } finally {
-      setIsLoading(false);
+      if (mounted.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -245,7 +272,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{user.email}</p>
-            <p className="text-xs text-muted-foreground">Online</p>
+            <p className="text-xs text-muted-foreground">Powered by Gemini</p>
           </div>
           <Button
             onClick={() => setIsCollapsed(true)}

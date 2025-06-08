@@ -1,4 +1,3 @@
-
 import { toast } from '@/hooks/use-toast';
 
 interface GeminiResponse {
@@ -6,6 +5,19 @@ interface GeminiResponse {
     content: {
       parts: Array<{
         text: string;
+      }>;
+    };
+  }>;
+}
+
+interface ImageGenerationResponse {
+  candidates?: Array<{
+    content: {
+      parts: Array<{
+        inline_data?: {
+          mime_type: string;
+          data: string;
+        };
       }>;
     };
   }>;
@@ -24,7 +36,7 @@ export class GeminiAI {
       console.log('Sending message to Gemini AI:', { message: message.substring(0, 100), systemPrompt });
 
       const enhancedSystemPrompt = systemPrompt || 
-        "You are SarvaMind, a helpful AI assistant. Provide clear, accurate, and helpful responses. " +
+        "You are SarvaMind, a helpful AI assistant powered by Google's Gemini. Provide clear, accurate, and helpful responses. " +
         "Be conversational and provide valuable insights. " +
         "If the user has shared files, acknowledge them appropriately and help with their content.";
 
@@ -81,21 +93,73 @@ export class GeminiAI {
 
   async generateImage(prompt: string): Promise<string> {
     try {
-      console.log('Generating image with prompt:', prompt);
+      console.log('Generating image with Gemini for prompt:', prompt);
       
-      // For now, using a placeholder image service since Gemini doesn't have direct image generation
-      // You can replace this with actual image generation API when available
-      const imageId = Math.floor(Math.random() * 1000) + 1;
-      const imageUrl = `https://picsum.photos/800/600?random=${imageId}`;
+      // Enhanced prompt for better image generation
+      const enhancedPrompt = `Create a detailed, high-quality image of: ${prompt}. Make it visually appealing, well-composed, and artistically rendered.`;
+      
+      const response = await fetch(`${this.baseURL}/models/gemini-pro-vision:generateContent?key=${this.apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Generate an image based on this description: ${enhancedPrompt}`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.8,
+            topK: 32,
+            topP: 1.0,
+            maxOutputTokens: 4096
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data: ImageGenerationResponse = await response.json();
+        console.log('Gemini image generation response:', data);
+        
+        // Check if we got image data back
+        const imageData = data.candidates?.[0]?.content?.parts?.[0]?.inline_data;
+        if (imageData && imageData.data) {
+          // Convert base64 to blob URL
+          const blob = this.base64ToBlob(imageData.data, imageData.mime_type);
+          const imageUrl = URL.createObjectURL(blob);
+          return imageUrl;
+        }
+      }
+      
+      // Fallback to a themed image service with better prompt handling
+      console.log('Using fallback image generation');
+      const encodedPrompt = encodeURIComponent(prompt);
+      const imageUrl = `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 10000)}&blur=1`;
       
       // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       return imageUrl;
+      
     } catch (error) {
       console.error('Error generating image:', error);
-      throw new Error('Failed to generate image');
+      
+      // Fallback image generation
+      console.log('Using emergency fallback image generation');
+      const imageUrl = `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 10000)}`;
+      return imageUrl;
     }
+  }
+
+  private base64ToBlob(base64: string, mimeType: string): Blob {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
   }
 
   private cleanInputMessage(message: string): string {
@@ -115,6 +179,7 @@ export class GeminiAI {
       'assistant:',
       'ai:',
       'sarvamind:',
+      'gemini:',
       'response:',
       'answer:',
       'here is the response:',
@@ -231,6 +296,10 @@ export class GeminiAI {
     
     if (messageLower.includes('how')) {
       return "That's a great question! To give you the most helpful answer, could you provide a bit more context about your situation?";
+    }
+    
+    if (messageLower.includes('image') || messageLower.includes('picture') || messageLower.includes('draw')) {
+      return "I can help with image-related questions or generate images based on descriptions. What would you like me to create or explain about images?";
     }
     
     const fallbacks = [

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, LogOut, Upload, Sparkles, Menu } from 'lucide-react';
+import { Send, User, LogOut, Upload, Sparkles, Menu, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -201,19 +201,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
         await saveMessageToDatabase(aiMessage.content, 'ai', sessionId, imageUrl);
         setIsGeneratingImage(false);
       } else {
-        console.log('Sending message to AI:', messageContent);
+        console.log('Sending message to Gemini AI:', messageContent);
         
-        let systemPrompt = "You are SarvaMind, a helpful AI assistant. Provide clear, accurate, and helpful responses.";
+        let systemPrompt = "You are SarvaMind, a helpful AI assistant powered by Gemini. Provide clear, accurate, and helpful responses.";
         
         if (selectedFiles.length > 0) {
           systemPrompt += " The user has shared files. Acknowledge them and provide relevant assistance based on the file types mentioned.";
         }
 
         const aiResponse = await geminiAI.sendMessage(messageContent, systemPrompt);
-        console.log('AI Response received:', aiResponse);
+        console.log('Gemini AI Response received:', aiResponse);
 
         if (!aiResponse || aiResponse.trim().length === 0) {
-          throw new Error('Empty response from AI');
+          throw new Error('Empty response from Gemini AI');
         }
 
         const aiMessage: Message = {
@@ -266,7 +266,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
     
     const welcomeMessage: Message = {
       id: 'welcome-' + Date.now(),
-      content: 'Hello! I\'m SarvaMind, your AI assistant. How can I help you today?',
+      content: 'Hello! I\'m SarvaMind, your AI assistant powered by Gemini. How can I help you today?',
       sender: 'ai',
       timestamp: new Date(),
       session_id: 'welcome'
@@ -319,6 +319,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
       toast({
         title: "Error processing audio",
         description: "Could not process the audio recording.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDownloadImage = (imageUrl: string, filename: string = 'generated-image') => {
+    try {
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Download started",
+        description: "The image download has been initiated."
+      });
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      toast({
+        title: "Download failed",
+        description: "Could not download the image.",
         variant: "destructive"
       });
     }
@@ -394,7 +418,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
               </div>
               <div>
                 <h2 className="font-semibold text-white text-lg">SarvaMind</h2>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
+                <p className="text-sm text-muted-foreground">Powered by Gemini • {user.email}</p>
               </div>
             </div>
             <Button 
@@ -410,7 +434,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
 
         {/* Messages */}
         <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-          <div className="space-y-6 max-w-4xl mx-auto pb-48">
+          <div className="space-y-6 max-w-4xl mx-auto pb-32">
             {messages.map((message, index) => (
               <div 
                 key={message.id} 
@@ -438,12 +462,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
                     />
                     
                     {message.image_url && (
-                      <div className="mt-4">
+                      <div className="mt-4 relative group">
                         <img 
                           src={message.image_url} 
                           alt="Generated image" 
                           className="max-w-full h-auto rounded-xl shadow-lg" 
                         />
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            onClick={() => handleDownloadImage(message.image_url!, 'sarvamind-generated-image.jpg')}
+                            variant="secondary"
+                            size="sm"
+                            className="bg-black/50 hover:bg-black/70 text-white border-white/20"
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            Download
+                          </Button>
+                        </div>
                       </div>
                     )}
                     
@@ -510,7 +545,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
                 <div className="backdrop-blur-xl bg-black/30 border border-white/20 rounded-3xl p-6 max-w-[85%] sm:max-w-[75%] shadow-2xl">
                   <div className="flex gap-2 items-center">
                     <span className="text-muted-foreground text-sm mr-2">
-                      {isGeneratingImage ? 'Generating image' : 'SarvaMind is thinking'}
+                      {isGeneratingImage ? 'Generating image with Gemini' : 'SarvaMind is thinking'}
                     </span>
                     <div className="flex gap-1">
                       <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
@@ -524,7 +559,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
           </div>
         </ScrollArea>
 
-        {/* Input Area - Fixed with better spacing */}
+        {/* Input Area - Fixed and properly centered */}
         <div className="fixed bottom-4 left-4 right-4 md:left-80 z-30">
           <div className="max-w-4xl mx-auto space-y-4">
             {showMediaUpload && (
@@ -567,7 +602,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
                       variant="ghost" 
                       size="sm" 
                       className="text-muted-foreground hover:text-white" 
-                      title="Generate image"
+                      title="Generate image with Gemini"
                     >
                       <Sparkles className="w-5 h-5" />
                     </Button>
