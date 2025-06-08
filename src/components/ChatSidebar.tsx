@@ -43,11 +43,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         schema: 'public',
         table: 'messages',
         filter: `user_id=eq.${user.id}`
-      }, () => {
-        console.log('Message change detected, reloading sessions');
+      }, (payload) => {
+        console.log('Message change detected, reloading sessions', payload);
         loadChatSessions();
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(subscription);
@@ -68,53 +70,58 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       if (error) {
         console.error('Error loading chat sessions:', error);
         setSessions([]);
-      } else {
-        console.log('Raw messages data:', messagesData);
-        
-        const sessionMap = new Map<string, ChatSession>();
-        
-        if (messagesData && Array.isArray(messagesData)) {
-          messagesData.forEach((msg) => {
-            const sessionId = msg.session_id;
-            if (sessionId && sessionId !== 'welcome') {
-              if (!sessionMap.has(sessionId)) {
-                // Create new session entry with first user message as title
-                const title = msg.sender === 'user' 
-                  ? generateChatTitle(msg.content || '') 
-                  : 'New Chat';
-                
-                sessionMap.set(sessionId, {
-                  id: sessionId,
-                  title: title,
-                  created_at: msg.created_at,
-                  updated_at: msg.created_at,
-                  message_count: 1
-                });
-              } else {
-                const session = sessionMap.get(sessionId)!;
-                session.message_count += 1;
-                
-                // Update title with first user message if current title is generic
-                if (session.title === 'New Chat' && msg.sender === 'user' && msg.content) {
-                  session.title = generateChatTitle(msg.content);
-                }
-                
-                // Update timestamp if this message is newer
-                if (new Date(msg.created_at) > new Date(session.updated_at)) {
-                  session.updated_at = msg.created_at;
-                }
-              }
-            }
-          });
-        }
-
-        const formattedSessions = Array.from(sessionMap.values()).sort((a, b) => 
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        );
-
-        console.log('Formatted sessions:', formattedSessions);
-        setSessions(formattedSessions);
+        return;
       }
+
+      console.log('Raw messages data:', messagesData);
+      
+      if (!messagesData || messagesData.length === 0) {
+        console.log('No messages found');
+        setSessions([]);
+        return;
+      }
+
+      const sessionMap = new Map<string, ChatSession>();
+      
+      messagesData.forEach((msg) => {
+        const sessionId = msg.session_id;
+        if (sessionId && sessionId !== 'welcome') {
+          if (!sessionMap.has(sessionId)) {
+            // Create new session entry with first user message as title
+            const title = msg.sender === 'user' && msg.content
+              ? generateChatTitle(msg.content) 
+              : 'New Chat';
+            
+            sessionMap.set(sessionId, {
+              id: sessionId,
+              title: title,
+              created_at: msg.created_at,
+              updated_at: msg.created_at,
+              message_count: 1
+            });
+          } else {
+            const session = sessionMap.get(sessionId)!;
+            session.message_count += 1;
+            
+            // Update title with first user message if current title is generic
+            if (session.title === 'New Chat' && msg.sender === 'user' && msg.content) {
+              session.title = generateChatTitle(msg.content);
+            }
+            
+            // Update timestamp if this message is newer
+            if (new Date(msg.created_at) > new Date(session.updated_at)) {
+              session.updated_at = msg.created_at;
+            }
+          }
+        }
+      });
+
+      const formattedSessions = Array.from(sessionMap.values()).sort((a, b) => 
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+
+      console.log('Formatted sessions:', formattedSessions);
+      setSessions(formattedSessions);
     } catch (error) {
       console.error('Error loading chat sessions:', error);
       setSessions([]);
@@ -127,9 +134,18 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     if (!firstMessage || firstMessage.trim() === '') {
       return 'New Chat';
     }
-    const words = firstMessage.trim().split(' ').slice(0, 4);
+    
+    // Clean the message content
+    let cleanMessage = firstMessage.replace(/^\[.*?\]\s*/, ''); // Remove file upload indicators
+    cleanMessage = cleanMessage.trim();
+    
+    if (cleanMessage === '') {
+      return 'New Chat';
+    }
+    
+    const words = cleanMessage.split(' ').slice(0, 4);
     let title = words.join(' ');
-    if (firstMessage.length > 30) {
+    if (cleanMessage.length > 30) {
       title += '...';
     }
     return title || 'New Chat';
@@ -152,10 +168,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           variant: "destructive",
         });
       } else {
-        await loadChatSessions();
+        // Update the sessions list immediately
+        setSessions(prev => prev.filter(session => session.id !== sessionId));
+        
         if (currentSessionId === sessionId) {
           onSessionSelect(null);
         }
+        
         toast({
           title: "Chat deleted",
           description: "The chat session has been deleted.",
@@ -163,6 +182,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       }
     } catch (error) {
       console.error('Error deleting session:', error);
+      toast({
+        title: "Error deleting chat",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
     }
   };
 
