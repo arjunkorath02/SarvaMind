@@ -64,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             if (mounted.current) {
               loadChatSessions();
             }
-          }, 500);
+          }, 1000);
         }
       })
       .subscribe((status) => {
@@ -86,9 +86,11 @@ const Sidebar: React.FC<SidebarProps> = ({
     
     try {
       console.log('Loading chat sessions for user:', user.id);
+      
+      // First, get all messages for this user
       const { data: messagesData, error } = await supabase
         .from('messages')
-        .select('session_id, content, created_at, sender')
+        .select('session_id, content, created_at, sender, id')
         .eq('user_id', user.id)
         .not('session_id', 'is', null)
         .neq('session_id', 'welcome')
@@ -102,7 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return;
       }
 
-      console.log('Raw messages data for sidebar:', messagesData);
+      console.log('Raw messages data for sidebar:', messagesData?.length || 0, 'messages found');
       
       if (!messagesData || messagesData.length === 0) {
         console.log('No messages found for sidebar');
@@ -118,8 +120,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         const sessionId = msg.session_id;
         if (sessionId && sessionId !== 'welcome') {
           if (!sessionMap.has(sessionId)) {
-            const title = msg.sender === 'user' && msg.content
-              ? generateChatTitle(msg.content) 
+            // Find the first user message for this session to use as title
+            const firstUserMessage = messagesData
+              .filter(m => m.session_id === sessionId && m.sender === 'user')
+              .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+            
+            const title = firstUserMessage?.content
+              ? generateChatTitle(firstUserMessage.content) 
               : 'New Chat';
             
             sessionMap.set(sessionId, {
@@ -133,10 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             const session = sessionMap.get(sessionId)!;
             session.message_count += 1;
             
-            if (session.title === 'New Chat' && msg.sender === 'user' && msg.content) {
-              session.title = generateChatTitle(msg.content);
-            }
-            
+            // Update timestamp if this message is newer
             if (new Date(msg.created_at) > new Date(session.updated_at)) {
               session.updated_at = msg.created_at;
             }
@@ -148,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
 
-      console.log('Formatted sessions for sidebar:', formattedSessions);
+      console.log('Formatted sessions for sidebar:', formattedSessions.length, 'sessions found');
       if (mounted.current) {
         setSessions(formattedSessions);
       }

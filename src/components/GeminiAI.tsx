@@ -1,3 +1,4 @@
+
 import { toast } from '@/hooks/use-toast';
 
 interface GeminiResponse {
@@ -33,17 +34,17 @@ export class GeminiAI {
 
   async sendMessage(message: string, systemPrompt?: string): Promise<string> {
     try {
-      console.log('Sending message to Gemini AI:', { message: message.substring(0, 100), systemPrompt });
+      console.log('Sending message to Gemini AI:', { message: message.substring(0, 100) });
 
       const enhancedSystemPrompt = systemPrompt || 
         "You are SarvaMind, a helpful AI assistant powered by Google's Gemini. Provide clear, accurate, and helpful responses. " +
-        "Be conversational and provide valuable insights. " +
-        "If the user has shared files, acknowledge them appropriately and help with their content.";
+        "Be conversational and engaging. Always provide detailed and informative answers. " +
+        "If the user asks about anything, provide comprehensive explanations and examples when appropriate.";
 
       const cleanInput = this.cleanInputMessage(message);
-      console.log('Cleaned input:', cleanInput.substring(0, 100));
+      console.log('Cleaned input for Gemini:', cleanInput.substring(0, 100));
 
-      const fullPrompt = `${enhancedSystemPrompt}\n\nUser: ${cleanInput}\n\nAssistant:`;
+      const fullPrompt = `${enhancedSystemPrompt}\n\nUser: ${cleanInput}`;
 
       const response = await fetch(`${this.baseURL}/models/gemini-pro:generateContent?key=${this.apiKey}`, {
         method: 'POST',
@@ -57,24 +58,59 @@ export class GeminiAI {
             }]
           }],
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.9,
             topK: 40,
             topP: 0.95,
             maxOutputTokens: 2048,
-          }
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
         })
       });
 
       if (!response.ok) {
-        console.error('Gemini API error:', response.status, response.statusText);
-        throw new Error(`Failed to get response from Gemini AI: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Gemini API error:', response.status, response.statusText, errorText);
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
       }
 
       const data: GeminiResponse = await response.json();
       console.log('Gemini AI raw response:', data);
       
-      let aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I understand. How can I assist you further?";
+      if (!data.candidates || data.candidates.length === 0) {
+        console.error('No candidates in response:', data);
+        throw new Error('No response candidates from Gemini');
+      }
+
+      const candidate = data.candidates[0];
+      if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+        console.error('Invalid candidate structure:', candidate);
+        throw new Error('Invalid response structure from Gemini');
+      }
+
+      let aiResponse = candidate.content.parts[0].text;
       
+      if (!aiResponse || aiResponse.trim().length === 0) {
+        console.error('Empty response text from Gemini');
+        throw new Error('Empty response from Gemini');
+      }
+
       aiResponse = this.cleanAndValidateResponse(aiResponse, cleanInput);
       
       console.log('Final cleaned response:', aiResponse.substring(0, 100));
@@ -83,83 +119,61 @@ export class GeminiAI {
     } catch (error) {
       console.error('Error calling Gemini AI:', error);
       
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        return "I'm having trouble connecting to the AI service. Please check your internet connection and try again.";
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('network')) {
+          return "I'm having trouble connecting to the AI service. Please check your internet connection and try again.";
+        }
+        if (error.message.includes('API key')) {
+          return "There seems to be an issue with the API configuration. Please contact support.";
+        }
+        if (error.message.includes('quota') || error.message.includes('limit')) {
+          return "I've reached my usage limit for now. Please try again in a moment.";
+        }
       }
       
-      return "I apologize, but I'm having trouble processing your request right now. Could you please try rephrasing your question?";
+      return "I encountered an unexpected error. Please try rephrasing your question or try again.";
     }
   }
 
   async generateImage(prompt: string): Promise<string> {
     try {
-      console.log('Generating image with Gemini for prompt:', prompt);
+      console.log('Generating image with prompt:', prompt);
       
-      // Enhanced prompt for better image generation
-      const enhancedPrompt = `Create a detailed, high-quality image of: ${prompt}. Make it visually appealing, well-composed, and artistically rendered.`;
+      // For now, we'll use a placeholder image service that creates themed images
+      // Gemini doesn't have direct image generation capabilities yet
+      const enhancedPrompt = prompt.toLowerCase().replace(/\s+/g, '+');
       
-      const response = await fetch(`${this.baseURL}/models/gemini-pro-vision:generateContent?key=${this.apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Generate an image based on this description: ${enhancedPrompt}`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.8,
-            topK: 32,
-            topP: 1.0,
-            maxOutputTokens: 4096
-          }
-        })
-      });
-
-      if (response.ok) {
-        const data: ImageGenerationResponse = await response.json();
-        console.log('Gemini image generation response:', data);
-        
-        // Check if we got image data back
-        const imageData = data.candidates?.[0]?.content?.parts?.[0]?.inline_data;
-        if (imageData && imageData.data) {
-          // Convert base64 to blob URL
-          const blob = this.base64ToBlob(imageData.data, imageData.mime_type);
-          const imageUrl = URL.createObjectURL(blob);
-          return imageUrl;
-        }
+      // Create a more relevant image URL based on the prompt
+      let imageUrl: string;
+      
+      if (prompt.toLowerCase().includes('cat') || prompt.toLowerCase().includes('kitten')) {
+        imageUrl = `https://api.unsplash.com/photos/random?query=cat&client_id=demo&w=800&h=600`;
+      } else if (prompt.toLowerCase().includes('dog') || prompt.toLowerCase().includes('puppy')) {
+        imageUrl = `https://api.unsplash.com/photos/random?query=dog&client_id=demo&w=800&h=600`;
+      } else if (prompt.toLowerCase().includes('nature') || prompt.toLowerCase().includes('landscape')) {
+        imageUrl = `https://api.unsplash.com/photos/random?query=nature&client_id=demo&w=800&h=600`;
+      } else if (prompt.toLowerCase().includes('city') || prompt.toLowerCase().includes('urban')) {
+        imageUrl = `https://api.unsplash.com/photos/random?query=city&client_id=demo&w=800&h=600`;
+      } else if (prompt.toLowerCase().includes('food')) {
+        imageUrl = `https://api.unsplash.com/photos/random?query=food&client_id=demo&w=800&h=600`;
+      } else {
+        // Fallback to a themed image service
+        imageUrl = `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 10000)}`;
       }
       
-      // Fallback to a themed image service with better prompt handling
-      console.log('Using fallback image generation');
-      const encodedPrompt = encodeURIComponent(prompt);
-      const imageUrl = `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 10000)}&blur=1`;
-      
       // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
+      console.log('Generated image URL:', imageUrl);
       return imageUrl;
       
     } catch (error) {
       console.error('Error generating image:', error);
       
       // Fallback image generation
-      console.log('Using emergency fallback image generation');
       const imageUrl = `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 10000)}`;
       return imageUrl;
     }
-  }
-
-  private base64ToBlob(base64: string, mimeType: string): Blob {
-    const byteCharacters = atob(base64);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: mimeType });
   }
 
   private cleanInputMessage(message: string): string {

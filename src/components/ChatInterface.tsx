@@ -203,13 +203,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
       } else {
         console.log('Sending message to Gemini AI:', messageContent);
         
-        let systemPrompt = "You are SarvaMind, a helpful AI assistant powered by Gemini. Provide clear, accurate, and helpful responses.";
-        
-        if (selectedFiles.length > 0) {
-          systemPrompt += " The user has shared files. Acknowledge them and provide relevant assistance based on the file types mentioned.";
-        }
-
-        const aiResponse = await geminiAI.sendMessage(messageContent, systemPrompt);
+        const aiResponse = await geminiAI.sendMessage(messageContent);
         console.log('Gemini AI Response received:', aiResponse);
 
         if (!aiResponse || aiResponse.trim().length === 0) {
@@ -432,15 +426,110 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
           </div>
         </div>
 
-        {/* Messages */}
-        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-          <div className="space-y-6 max-w-4xl mx-auto pb-32">
-            {messages.map((message, index) => (
-              <div 
-                key={message.id} 
-                className={`flex gap-4 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {message.sender === 'ai' && (
+        {/* Messages - Fixed height calculation to account for input area */}
+        <div className="flex-1 relative">
+          <ScrollArea ref={scrollAreaRef} className="absolute inset-0 pb-48">
+            <div className="space-y-6 max-w-4xl mx-auto p-4">
+              {messages.map((message, index) => (
+                <div 
+                  key={message.id} 
+                  className={`flex gap-4 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {message.sender === 'ai' && (
+                    <div className="w-10 h-10 rounded-full overflow-hidden glow-subtle flex-shrink-0">
+                      <img 
+                        src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
+                        alt="SarvaMind" 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                  )}
+                  
+                  <div className={`max-w-[85%] sm:max-w-[75%] ${message.sender === 'user' ? 'order-first' : ''}`}>
+                    <div className={`backdrop-blur-xl rounded-3xl p-6 mb-4 ${
+                      message.sender === 'user' 
+                        ? 'bg-gradient-to-br from-primary/30 to-accent/30 border border-primary/40 shadow-2xl glow-subtle ml-auto' 
+                        : 'bg-black/30 border border-white/20 shadow-2xl'
+                    }`}>
+                      <div 
+                        className="text-white leading-relaxed break-words whitespace-pre-wrap prose prose-invert max-w-none" 
+                        dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content || 'No content') }} 
+                      />
+                      
+                      {message.image_url && (
+                        <div className="mt-4 relative group">
+                          <img 
+                            src={message.image_url} 
+                            alt="Generated image" 
+                            className="max-w-full h-auto rounded-xl shadow-lg" 
+                          />
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              onClick={() => handleDownloadImage(message.image_url!, 'sarvamind-generated-image.jpg')}
+                              variant="secondary"
+                              size="sm"
+                              className="bg-black/50 hover:bg-black/70 text-white border-white/20"
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {message.mediaFiles && message.mediaFiles.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          {message.mediaFiles.map(file => (
+                            <div key={file.id} className="backdrop-blur-md bg-white/10 rounded-2xl p-3 border border-white/20">
+                              {file.type === 'image' && file.preview && (
+                                <img 
+                                  src={file.preview} 
+                                  alt="Shared image" 
+                                  className="max-w-full h-auto rounded-xl shadow-lg" 
+                                />
+                              )}
+                              {file.type === 'video' && file.url && (
+                                <video src={file.url} controls className="max-w-full h-auto rounded-xl shadow-lg" />
+                              )}
+                              {file.type === 'audio' && file.url && (
+                                <audio src={file.url} controls className="w-full" />
+                              )}
+                              {(file.type === 'document' || file.type === 'archive') && (
+                                <p className="text-sm text-muted-foreground">{file.file.name}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-4 mb-6">
+                      <p className="text-xs text-muted-foreground">
+                        {formatTime(message.timestamp)}
+                      </p>
+                      
+                      {message.sender === 'ai' && message.content && (
+                        <div className="flex items-center gap-3">
+                          <ImprovedTextToSpeech text={message.content} />
+                          <ImprovedTranslationFeature 
+                            text={message.content} 
+                            onTranslate={(translatedText, targetLang) => console.log('Translation:', translatedText, targetLang)} 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {message.sender === 'user' && (
+                    <div className="w-10 h-10 rounded-full backdrop-blur-md bg-accent/30 border border-accent/40 flex items-center justify-center glow-subtle flex-shrink-0">
+                      <User className="w-5 h-5 text-accent" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isTyping && (
+                <div className="flex gap-4 justify-start">
                   <div className="w-10 h-10 rounded-full overflow-hidden glow-subtle flex-shrink-0">
                     <img 
                       src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
@@ -448,120 +537,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ user }) => {
                       className="w-full h-full object-cover" 
                     />
                   </div>
-                )}
-                
-                <div className={`max-w-[85%] sm:max-w-[75%] ${message.sender === 'user' ? 'order-first' : ''}`}>
-                  <div className={`backdrop-blur-xl rounded-3xl p-6 mb-4 ${
-                    message.sender === 'user' 
-                      ? 'bg-gradient-to-br from-primary/30 to-accent/30 border border-primary/40 shadow-2xl glow-subtle ml-auto' 
-                      : 'bg-black/30 border border-white/20 shadow-2xl'
-                  }`}>
-                    <div 
-                      className="text-white leading-relaxed break-words whitespace-pre-wrap prose prose-invert max-w-none" 
-                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content || 'No content') }} 
-                    />
-                    
-                    {message.image_url && (
-                      <div className="mt-4 relative group">
-                        <img 
-                          src={message.image_url} 
-                          alt="Generated image" 
-                          className="max-w-full h-auto rounded-xl shadow-lg" 
-                        />
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            onClick={() => handleDownloadImage(message.image_url!, 'sarvamind-generated-image.jpg')}
-                            variant="secondary"
-                            size="sm"
-                            className="bg-black/50 hover:bg-black/70 text-white border-white/20"
-                          >
-                            <Download className="w-4 h-4 mr-1" />
-                            Download
-                          </Button>
-                        </div>
+                  <div className="backdrop-blur-xl bg-black/30 border border-white/20 rounded-3xl p-6 max-w-[85%] sm:max-w-[75%] shadow-2xl">
+                    <div className="flex gap-2 items-center">
+                      <span className="text-muted-foreground text-sm mr-2">
+                        {isGeneratingImage ? 'Generating image with Gemini' : 'SarvaMind is thinking'}
+                      </span>
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                       </div>
-                    )}
-                    
-                    {message.mediaFiles && message.mediaFiles.length > 0 && (
-                      <div className="mt-4 space-y-3">
-                        {message.mediaFiles.map(file => (
-                          <div key={file.id} className="backdrop-blur-md bg-white/10 rounded-2xl p-3 border border-white/20">
-                            {file.type === 'image' && file.preview && (
-                              <img 
-                                src={file.preview} 
-                                alt="Shared image" 
-                                className="max-w-full h-auto rounded-xl shadow-lg" 
-                              />
-                            )}
-                            {file.type === 'video' && file.url && (
-                              <video src={file.url} controls className="max-w-full h-auto rounded-xl shadow-lg" />
-                            )}
-                            {file.type === 'audio' && file.url && (
-                              <audio src={file.url} controls className="w-full" />
-                            )}
-                            {(file.type === 'document' || file.type === 'archive') && (
-                              <p className="text-sm text-muted-foreground">{file.file.name}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center justify-between px-4 mb-6">
-                    <p className="text-xs text-muted-foreground">
-                      {formatTime(message.timestamp)}
-                    </p>
-                    
-                    {message.sender === 'ai' && message.content && (
-                      <div className="flex items-center gap-3">
-                        <ImprovedTextToSpeech text={message.content} />
-                        <ImprovedTranslationFeature 
-                          text={message.content} 
-                          onTranslate={(translatedText, targetLang) => console.log('Translation:', translatedText, targetLang)} 
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {message.sender === 'user' && (
-                  <div className="w-10 h-10 rounded-full backdrop-blur-md bg-accent/30 border border-accent/40 flex items-center justify-center glow-subtle flex-shrink-0">
-                    <User className="w-5 h-5 text-accent" />
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex gap-4 justify-start max-w-4xl mx-auto">
-                <div className="w-10 h-10 rounded-full overflow-hidden glow-subtle flex-shrink-0">
-                  <img 
-                    src="https://raw.githubusercontent.com/arjunkorath02/SarvaMindlogo/main/SarvaMind%20Logo.png" 
-                    alt="SarvaMind" 
-                    className="w-full h-full object-cover" 
-                  />
-                </div>
-                <div className="backdrop-blur-xl bg-black/30 border border-white/20 rounded-3xl p-6 max-w-[85%] sm:max-w-[75%] shadow-2xl">
-                  <div className="flex gap-2 items-center">
-                    <span className="text-muted-foreground text-sm mr-2">
-                      {isGeneratingImage ? 'Generating image with Gemini' : 'SarvaMind is thinking'}
-                    </span>
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
 
-        {/* Input Area - Fixed and properly centered */}
-        <div className="fixed bottom-4 left-4 right-4 md:left-80 z-30">
-          <div className="max-w-4xl mx-auto space-y-4">
+        {/* Input Area - Fixed positioning and proper centering */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent pt-8 pb-4">
+          <div className="max-w-4xl mx-auto px-4 space-y-4">
             {showMediaUpload && (
               <div className="backdrop-blur-xl bg-black/40 border border-white/20 rounded-3xl p-6 shadow-2xl glow-subtle">
                 <MediaUpload 
