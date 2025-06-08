@@ -1,3 +1,4 @@
+
 import { toast } from '@/hooks/use-toast';
 
 interface SarvamResponse {
@@ -14,24 +15,18 @@ export class ImprovedSarvamAI {
     this.apiKey = apiKey;
   }
 
-  // Improved message sending with better context handling and echo prevention
   async sendMessage(message: string, systemPrompt?: string): Promise<string> {
     try {
       console.log('Sending message to Sarvam AI:', { message: message.substring(0, 100), systemPrompt });
 
-      // Enhanced system prompt to prevent echoing and maintain context
       const enhancedSystemPrompt = systemPrompt || 
         "You are SarvaMind, a helpful AI assistant. Provide clear, accurate, and helpful responses. " +
-        "Do not repeat the user's input in your response. " +
-        "If you see conversation history, respond naturally to continue the conversation. " +
         "Be conversational and provide valuable insights. " +
         "If the user has shared files, acknowledge them appropriately.";
 
-      // Clean the input to remove any formatting that might cause echo
       const cleanInput = this.cleanInputMessage(message);
       console.log('Cleaned input:', cleanInput.substring(0, 100));
 
-      // Build the prompt for Sarvam AI
       const prompt = `${enhancedSystemPrompt}\n\nUser Query: ${cleanInput}\n\nAssistant Response:`;
 
       const response = await fetch(`${this.baseURL}/translate`, {
@@ -61,7 +56,6 @@ export class ImprovedSarvamAI {
       
       let aiResponse = data.translated_text || "I understand. How can I assist you further?";
       
-      // Enhanced response cleaning and validation
       aiResponse = this.cleanAndValidateResponse(aiResponse, cleanInput);
       
       console.log('Final cleaned response:', aiResponse.substring(0, 100));
@@ -70,7 +64,6 @@ export class ImprovedSarvamAI {
     } catch (error) {
       console.error('Error calling Sarvam AI:', error);
       
-      // Provide more specific error responses
       if (error instanceof Error && error.message.includes('Failed to fetch')) {
         return "I'm having trouble connecting to the AI service. Please check your internet connection and try again.";
       }
@@ -80,22 +73,15 @@ export class ImprovedSarvamAI {
   }
 
   private cleanInputMessage(message: string): string {
-    // Remove common prefixes that might cause confusion
     let cleaned = message.replace(/^(Previous conversation:|Current user message:|Context:|User Query:|Assistant Response:)/gm, '').trim();
-    
-    // Clean up conversation context formatting
     cleaned = cleaned.replace(/^(user|assistant):\s*/gm, '').trim();
-    
-    // Handle file upload indicators
     cleaned = cleaned.replace(/^\[.*?\]\s*/gm, '');
-    
     return cleaned;
   }
 
   private cleanAndValidateResponse(response: string, userInput: string): string {
     console.log('Cleaning response:', { response: response.substring(0, 50), userInput: userInput.substring(0, 50) });
     
-    // Remove common unwanted prefixes
     const prefixesToRemove = [
       'user query:',
       'assistant response:',
@@ -117,19 +103,16 @@ export class ImprovedSarvamAI {
       }
     }
     
-    // Enhanced echo detection and prevention
     if (this.isEchoOrPoorResponse(userInput, cleaned)) {
       console.log('Echo detected, generating alternative response');
       return this.generateContextualFallback(userInput);
     }
     
-    // Validate minimum response quality
     if (cleaned.length < 10) {
       console.log('Response too short, generating fallback');
       return this.generateContextualFallback(userInput);
     }
     
-    // Remove any remaining user input echoes
     if (userInput.length > 10 && cleaned.toLowerCase().includes(userInput.toLowerCase().substring(0, 20))) {
       const parts = cleaned.split(userInput.substring(0, 20));
       if (parts.length > 1 && parts[1].trim().length > 0) {
@@ -140,22 +123,16 @@ export class ImprovedSarvamAI {
     return cleaned;
   }
 
-  // Enhanced echo detection
   private isEchoOrPoorResponse(userMessage: string, aiResponse: string): boolean {
     const userLower = userMessage.toLowerCase().trim();
     const aiLower = aiResponse.toLowerCase().trim();
     
-    // Direct match or very similar
     if (userLower === aiLower) return true;
-    
-    // Check if AI response starts with user message
     if (aiLower.startsWith(userLower) && aiLower.length < userLower.length + 30) return true;
     
-    // Check similarity ratio
     const similarity = this.calculateSimilarity(userLower, aiLower);
     if (similarity > 0.8) return true;
     
-    // Check for generic/poor responses
     const poorResponses = [
       'i understand your message',
       'thank you for sharing',
@@ -210,7 +187,6 @@ export class ImprovedSarvamAI {
   private generateContextualFallback(message: string): string {
     const messageLower = message.toLowerCase();
     
-    // Analyze the message to provide more contextual fallbacks
     if (messageLower.includes('file') || messageLower.includes('upload') || messageLower.includes('image')) {
       return "I can see you've shared a file. Could you tell me more about what you'd like me to help you with regarding this file?";
     }
@@ -231,7 +207,6 @@ export class ImprovedSarvamAI {
       return "That's a great question! To give you the most helpful answer, could you provide a bit more context about your situation?";
     }
     
-    // Generic fallbacks
     const fallbacks = [
       "That's an interesting topic. What specific aspect would you like to explore further?",
       "I'd be happy to help you with that. Could you provide more details about your question?",
@@ -243,7 +218,6 @@ export class ImprovedSarvamAI {
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }
 
-  // Translation functionality
   async translateText(text: string, targetLanguage: string, sourceLanguage: string = 'auto'): Promise<string> {
     try {
       const response = await fetch(`${this.baseURL}/translate`, {
@@ -280,7 +254,6 @@ export class ImprovedSarvamAI {
     }
   }
 
-  // Text-to-Speech functionality
   async textToSpeech(text: string, language: string = 'en-IN'): Promise<string | null> {
     try {
       const response = await fetch(`${this.baseURL}/text-to-speech`, {
@@ -328,7 +301,6 @@ export class ImprovedSarvamAI {
     });
   }
 
-  // Auto-detect language
   async detectLanguage(text: string): Promise<string> {
     const hindiPattern = /[\u0900-\u097F]/;
     const arabicPattern = /[\u0600-\u06FF]/;

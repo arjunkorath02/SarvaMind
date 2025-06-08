@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import EnhancedChatInterface from './EnhancedChatInterface';
+import ChatInterface from './ChatInterface';
 import AuthForm from './AuthForm';
 
 const ChatApp = () => {
@@ -12,9 +12,7 @@ const ChatApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Set up Supabase auth state listener
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state changed:', event, session);
@@ -24,7 +22,6 @@ const ChatApp = () => {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -105,8 +102,8 @@ const ChatApp = () => {
 
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-black flex items-center justify-center">
+        <div className="text-center animate-fade-in">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full glass animate-pulse glow"></div>
           <p className="text-muted-foreground">Loading...</p>
         </div>
@@ -124,7 +121,7 @@ const ChatApp = () => {
     );
   }
 
-  return <EnhancedChatInterface user={user} />;
+  return <ChatInterface user={user} />;
 };
 
 export default ChatApp;
